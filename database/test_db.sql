@@ -16,9 +16,9 @@ DROP TABLE service CASCADE CONSTRAINTS;
 
 CREATE TABLE person (
     person_id int primary key,
-    first_name varchar(255) ,
-    last_name varchar(255),
-    personal_id varchar(255) unique,
+    first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')),
+    last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')),
+    personal_id varchar(255) unique CHECK (regexp_like(personal_id,'^\d{6}/\d{4}$')),
     sex char CHECK (sex in ('M', 'F')),
     date_of_birth date
 );
@@ -68,7 +68,7 @@ CREATE TABLE branch(
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    phone_number varchar(10)
+    phone_number varchar(10) CHECK (regexp_like(phone_number, '^\d{9}$'))
 );
 
 CREATE TABLE credit_card(
@@ -105,13 +105,13 @@ CREATE TABLE place(
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    postal_code integer
+    postal_code integer CHECK (regexp_like(postal_code, '^\d{5}$'))
 );
 
 CREATE TABLE contact_info(
     contact_id int primary key,
-    phone_number varchar(10) unique,
-    email varchar(255) unique
+    phone_number varchar(10) unique CHECK (regexp_like(phone_number, '^\d{9}$')),
+    email varchar(255) unique CHECK (regexp_like(email,'^c /^\S+@\S+\.\S+$/'))
 );
 
 CREATE TABLE service(
@@ -122,7 +122,7 @@ CREATE TABLE service(
     fee decimal(10, 2)
 );
 
-INSERT INTO person VALUES (0, 'Andrej', 'Novák', '010203/1234', 'M', '3.2.2001');
+INSERT INTO person VALUES (0, 'Ondřej', 'Novák', '010203/1234', 'M', '3.2.2001');
 INSERT INTO person VALUES (1, 'Anna', 'Suchá', '010263/4567', 'F', '3.2.2001');
 INSERT INTO person VALUES (2, 'Antonín', 'Novák', '030204/1111', 'M', '4.2.2003');
 INSERT INTO place VALUES (0, 'adr0', 'Čobolo city', 'Slovakia','63500');

@@ -1,18 +1,26 @@
-
-DROP TABLE person CASCADE CONSTRAINTS;
-DROP TABLE client CASCADE CONSTRAINTS;
-DROP TABLE employee CASCADE CONSTRAINTS;
-DROP TABLE account CASCADE CONSTRAINTS;
-DROP TABLE account_type CASCADE CONSTRAINTS;
-DROP TABLE bank CASCADE CONSTRAINTS;
-DROP TABLE branch CASCADE CONSTRAINTS;
-DROP TABLE credit_card CASCADE CONSTRAINTS;
-DROP TABLE client_user CASCADE CONSTRAINTS;
-DROP TABLE card_type CASCADE CONSTRAINTS;
-DROP TABLE operation CASCADE CONSTRAINTS;
-DROP TABLE place CASCADE CONSTRAINTS;
-DROP TABLE contact_info CASCADE CONSTRAINTS;
-DROP TABLE service CASCADE CONSTRAINTS;
+-- DROP all custom tables that exists
+-- -942 == trying to drop non-existing table -> ignoring exception
+-- if the DROP fails for some other reason -> the exception is still raised
+BEGIN
+    DECLARE
+        type array_t is varray(40) of varchar2(100);
+        array array_t := array_t(
+            'person', 'client', 'employee', 'account', 'account_type', 'bank', 'branch', 'credit_card',
+            'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service'
+            );
+        BEGIN
+        FOR i IN 1..array.count LOOP
+            BEGIN
+                EXECUTE IMMEDIATE ('DROP TABLE ' || array(i) || ' CASCADE CONSTRAINTS');
+            EXCEPTION
+               WHEN OTHERS THEN
+                  IF SQLCODE != -942 THEN
+                     RAISE;
+                  END IF;
+            END;
+        END LOOP;
+    END;
+END;
 
 CREATE TABLE person (
     person_id int primary key,
@@ -141,6 +149,7 @@ INSERT INTO account_type VALUES (2, 'platinum', '1000');
 INSERT INTO bank VALUES (0, 'Equa bank', '6100', '12345678', 'EKOPHSUI');
 INSERT INTO bank VALUES (1, 'KB', '6600', '11223344', 'WAUZGR');
 INSERT INTO branch VALUES (0, 'branch_adr', 'Brno', 'Czechia', '123456789');
+INSERT INTO branch VALUES (1, 'branch_adr_2', 'Brno', 'Czechia', '123456778');
 INSERT INTO credit_card VALUES (0, '0000111122223333', '01/23', '123', 1, null, null, null, null);
 INSERT INTO credit_card VALUES (1, '0000111122224444', '01/22', '123', 0, 69000.00, 69000.00, 69000.00, 69000.00);
 INSERT INTO card_type VALUES (0, 'VISA standard', 'VISA', 0, 'ahoj');

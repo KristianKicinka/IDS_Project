@@ -6,7 +6,7 @@ BEGIN
         type array_t is varray(40) of varchar2(100);
         array array_t := array_t(
             'person', 'client', 'employee', 'account', 'account_type', 'bank', 'branch', 'credit_card',
-            'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service'
+            'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service', 'currency'
             );
         BEGIN
         FOR i IN 1..array.count LOOP
@@ -47,6 +47,7 @@ CREATE TABLE employee(
 CREATE TABLE account(
     account_id int primary key,
     account_number varchar(22) unique,
+    IBAN varchar(30) unique,
     balance decimal(10, 2),
     is_active int CHECK ( is_active IN (0, 1))
 );
@@ -104,8 +105,13 @@ CREATE TABLE operation(
     operation_type varchar(32),
     amount decimal(10, 2),
     was_created_at date,
-    is_done int CHECK ( is_done IN (0, 1) ),
-    currency varchar(6)
+    is_done int CHECK ( is_done IN (0, 1) )
+);
+
+CREATE TABLE currency(
+    currency_id int primary key,
+    name varchar(40),
+    exchange_rate decimal(10,5)
 );
 
 CREATE TABLE place(
@@ -139,8 +145,10 @@ INSERT INTO client VALUES (1);
 INSERT INTO client VALUES (2);
 INSERT INTO employee VALUES (0, 'position_list', 42000.00, 0, '1.1.2020', null);
 INSERT INTO employee VALUES (1, 'position_list', 69000, 42, '2.2.2020', '3.2.2022');
-INSERT INTO account VALUES (0, '1245/0000164548/6100', 15422.03, 1);
-INSERT INTO account VALUES (1, '1245/0000164549/6100', 0.03, 0);
+INSERT INTO account VALUES (0, '1245/0000164548/6100', '123456489790', 15422.03, 1);
+INSERT INTO account VALUES (1, '1245/0000164549/6100', '6546546546546', 0.03, 0);
+INSERT INTO currency VALUES(0, 'EUR', 1);
+INSERT INTO currency VALUES(1, 'CZK', 0.041);
 INSERT INTO client_user VALUES (0, 'turbomost', 'heslo123');
 INSERT INTO client_user VALUES (1, 'blackwolf', 'IFJ_is_easy');
 INSERT INTO account_type VALUES (0, 'bezny', '0');
@@ -155,6 +163,7 @@ INSERT INTO credit_card VALUES (1, '0000111122224444', '01/22', '123', 0, 69000.
 INSERT INTO card_type VALUES (0, 'VISA standard', 'VISA', 0, 'ahoj');
 INSERT INTO card_type VALUES (1, 'VISA gold', 'VISA', 2000.00, 'gold club');
 INSERT INTO card_type VALUES (2, 'MasterCard standard', 'MasterCard', 0, 'pleb club');
-INSERT INTO operation VALUES (0, 'op_type_list', 123.00, '1.1.2022', 0, 'BTC');
+INSERT INTO operation VALUES (0, 'op_type_list', 123.00, '1.1.2022', 0);
+
 
 COMMIT;

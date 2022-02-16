@@ -1,11 +1,12 @@
 -- DROP all custom tables that exists
 -- -942 == trying to drop non-existing table -> ignoring exception
 -- if the DROP fails for some other reason -> the exception is still raised
+
 BEGIN
     DECLARE
         type array_t is varray(40) of varchar2(100);
         array array_t := array_t(
-            'person', 'client', 'employee', 'account', 'account_type', 'bank', 'branch', 'credit_card',
+            'person', 'client', 'employee', 'account', 'account_type', 'bank', 'branch', 'payment_card',
             'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service', 'currency'
             );
         BEGIN
@@ -80,8 +81,8 @@ CREATE TABLE branch(
     phone_number varchar(10) CHECK (regexp_like(phone_number, '^\d{9}$'))
 );
 
-CREATE TABLE credit_card(
-    credit_card_id int primary key,
+CREATE TABLE payment_card(
+    payment_card_id int primary key,
     card_number varchar(16) unique,
     expiration_date varchar(5) unique,
     CVV varchar(3),
@@ -105,7 +106,8 @@ CREATE TABLE operation(
     operation_type varchar(32),
     amount decimal(10, 2),
     was_created_at date,
-    is_done int CHECK ( is_done IN (0, 1) )
+    is_done int CHECK ( is_done IN (0, 1) ),
+    IBAN varchar(30)
 );
 
 CREATE TABLE currency(
@@ -158,12 +160,11 @@ INSERT INTO bank VALUES (0, 'Equa bank', '6100', '12345678', 'EKOPHSUI');
 INSERT INTO bank VALUES (1, 'KB', '6600', '11223344', 'WAUZGR');
 INSERT INTO branch VALUES (0, 'branch_adr', 'Brno', 'Czechia', '123456789');
 INSERT INTO branch VALUES (1, 'branch_adr_2', 'Brno', 'Czechia', '123456778');
-INSERT INTO credit_card VALUES (0, '0000111122223333', '01/23', '123', 1, null, null, null, null);
-INSERT INTO credit_card VALUES (1, '0000111122224444', '01/22', '123', 0, 69000.00, 69000.00, 69000.00, 69000.00);
+INSERT INTO payment_card VALUES (0, '0000111122223333', '01/23', '123', 1, null, null, null, null);
+INSERT INTO payment_card VALUES (1, '0000111122224444', '01/22', '123', 0, 69000.00, 69000.00, 69000.00, 69000.00);
 INSERT INTO card_type VALUES (0, 'VISA standard', 'VISA', 0, 'ahoj');
 INSERT INTO card_type VALUES (1, 'VISA gold', 'VISA', 2000.00, 'gold club');
 INSERT INTO card_type VALUES (2, 'MasterCard standard', 'MasterCard', 0, 'pleb club');
-INSERT INTO operation VALUES (0, 'op_type_list', 123.00, '1.1.2022', 0);
-
+INSERT INTO operation VALUES (0, 'op_type_list', 123.00, '1.1.2022', 0, 'CZ0212345678351');
 
 COMMIT;

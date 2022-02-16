@@ -1,4 +1,4 @@
-# IDS Projekt (Banka)
+# VUT IDS Projekt (Banka)
 ## Vytvorenie databázového návrhu
 Cieľom projektu je vytvoriť databázový návrh
 a implementáciu systému banky.

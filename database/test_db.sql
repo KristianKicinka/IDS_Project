@@ -7,7 +7,8 @@ BEGIN
         type array_t is varray(40) of varchar2(100);
         array array_t := array_t(
             'person', 'client', 'employee', 'account', 'account_type', 'bank', 'branch', 'payment_card',
-            'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service', 'currency'
+            'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service', 'currency',
+            'rules', 'account_service'
             );
         BEGIN
         FOR i IN 1..array.count LOOP
@@ -28,8 +29,9 @@ CREATE TABLE person (
     first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')),
     last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')),
     personal_id varchar(255) unique CHECK (regexp_like(personal_id,'^\d{6}/\d{4}$')),
-    sex char CHECK (sex in ('M', 'F')),
-    date_of_birth date
+    gender char CHECK (gender in ('M', 'F')),
+    date_of_birth date,
+    place_id int null --FK
 );
 
 CREATE TABLE client(
@@ -42,7 +44,8 @@ CREATE TABLE employee(
     salary decimal(10, 2),
     holidays_left int,
     started_at date,
-    ended_at date
+    ended_at date,
+    branch_id int null --FK
 );
 
 CREATE TABLE account(
@@ -50,13 +53,19 @@ CREATE TABLE account(
     account_number varchar(22) unique,
     IBAN varchar(30) unique,
     balance decimal(10, 2),
-    is_active int CHECK ( is_active IN (0, 1))
+    is_active int CHECK ( is_active IN (0, 1)),
+    branch_id int null, --FK
+    employee_id int null, --FK
+    client_user_id int null, --FK
+    account_type_id int null, --FK
+    currency_id int null --FK
 );
 
 CREATE TABLE client_user(
     user_id int primary key,
     username varchar(32),
-    password varchar(32)
+    password varchar(32),
+    client_id int null --FK
 );
 
 CREATE TABLE account_type(
@@ -78,7 +87,8 @@ CREATE TABLE branch(
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    phone_number varchar(10) CHECK (regexp_like(phone_number, '^\d{9}$'))
+    phone_number varchar(10) CHECK (regexp_like(phone_number, '^\d{9}$')),
+    bank_id int null --FK
 );
 
 CREATE TABLE payment_card(
@@ -90,7 +100,10 @@ CREATE TABLE payment_card(
     withdrawal_limit decimal(10, 2),
     mo_to_limit decimal(10, 2),
     proximity_payment_limit decimal(10, 2),
-    global_payment_limit decimal(10, 2)
+    global_payment_limit decimal(10, 2),
+    account_id int null, --FK
+    card_type_id int null, --FK
+    client_user_id int null --FK
 );
 
 CREATE TABLE card_type(
@@ -107,7 +120,9 @@ CREATE TABLE operation(
     amount decimal(10, 2),
     was_created_at date,
     is_done int CHECK ( is_done IN (0, 1) ),
-    IBAN varchar(30)
+    IBAN varchar(30),
+    account_id int null , --FK
+    currency_id int null --FK
 );
 
 CREATE TABLE currency(
@@ -127,7 +142,7 @@ CREATE TABLE place(
 CREATE TABLE contact_info(
     contact_id int primary key,
     phone_number varchar(10) unique CHECK (regexp_like(phone_number, '^\d{9}$')),
-    email varchar(255) unique CHECK (regexp_like(email,'^c /^\S+@\S+\.\S+$/'))
+    email varchar(255) unique CHECK (regexp_like(email,'^(c /^\S+@\S+\.\S+$/'))
 );
 
 CREATE TABLE service(
@@ -138,33 +153,120 @@ CREATE TABLE service(
     fee decimal(10, 2)
 );
 
-INSERT INTO person VALUES (0, 'Ondřej', 'Novák', '010203/1234', 'M', '3.2.2001');
-INSERT INTO person VALUES (1, 'Anna', 'Suchá', '010263/4567', 'F', '3.2.2001');
-INSERT INTO person VALUES (2, 'Antonín', 'Novák', '030204/1111', 'M', '4.2.2003');
+
+-- Create relationship
+ALTER TABLE branch ADD(
+    CONSTRAINT fk_place_branch FOREIGN KEY (branch_id) REFERENCES place (place_id) ON DELETE CASCADE,
+    CONSTRAINT fk_contact_branch FOREIGN KEY (branch_id) REFERENCES contact_info (contact_id) ON DELETE CASCADE,
+    CONSTRAINT fk_bank_branch FOREIGN KEY (bank_id) REFERENCES bank (bank_id) ON DELETE CASCADE
+    );
+
+ALTER TABLE client ADD (
+    CONSTRAINT fk_person_client FOREIGN KEY (client_id) REFERENCES person (person_id) ON DELETE CASCADE
+    );
+
+ALTER TABLE employee ADD (
+    CONSTRAINT fk_person_employee FOREIGN KEY (employee_id) REFERENCES person (person_id) ON DELETE CASCADE,
+    CONSTRAINT fk_branch_employee FOREIGN KEY (branch_id) references branch (branch_id) ON DELETE CASCADE
+    );
+
+ALTER TABLE person ADD (
+    CONSTRAINT fk_contact_person FOREIGN KEY (person_id) REFERENCES contact_info (contact_id) ON DELETE CASCADE,
+    CONSTRAINT fk_place_person FOREIGN KEY (place_id) REFERENCES place (place_id) ON DELETE CASCADE
+    );
+
+ALTER TABLE account ADD (
+    CONSTRAINT fk_branch_account FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE CASCADE,
+    CONSTRAINT fk_employee_account FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE,
+    CONSTRAINT fk_clientUser_account FOREIGN KEY (client_user_id) REFERENCES client_user (user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_accType_account FOREIGN KEY (account_type_id) REFERENCES account_type (account_type_id) ON DELETE CASCADE,
+    CONSTRAINT fk_currency_account FOREIGN KEY (currency_id) REFERENCES currency (currency_id) ON DELETE CASCADE
+    );
+
+ALTER TABLE client_user ADD (
+    CONSTRAINT fk_client_clientuser FOREIGN KEY (client_id) REFERENCES client (client_id) ON DELETE CASCADE
+    );
+
+ALTER TABLE payment_card ADD (
+    CONSTRAINT fk_account_paymentCard FOREIGN KEY (account_id) REFERENCES account (account_id) ON DELETE CASCADE,
+    CONSTRAINT fk_cardType_paymentCard FOREIGN KEY (card_type_id) REFERENCES card_type (card_type_id) ON DELETE CASCADE,
+    CONSTRAINT fk_clientUser_paymentCard FOREIGN KEY (client_user_id) REFERENCES client_user (user_id) ON DELETE CASCADE
+    );
+
+ALTER TABLE operation ADD (
+    CONSTRAINT fk_account_operation FOREIGN KEY (account_id) REFERENCES account (account_id) ON DELETE CASCADE,
+    CONSTRAINT fk_currency_operation FOREIGN KEY (currency_id) REFERENCES currency (currency_id) ON DELETE CASCADE
+    );
+
+-- Helping tables
+CREATE TABLE account_service (
+    id int primary key,
+    account_id int,
+    service_id int,
+    CONSTRAINT fk_account_accountService FOREIGN KEY (account_id) REFERENCES account (account_id),
+    CONSTRAINT fk_service_accountService FOREIGN KEY (service_id) REFERENCES service (service_id)
+);
+
+CREATE TABLE rules (
+    id int primary key,
+    daily_limit int not null,
+    account_id int,
+    client_user_id int,
+    CONSTRAINT fk_account_rules FOREIGN KEY (account_id) REFERENCES account (account_id),
+    CONSTRAINT fk_clientUser_rules FOREIGN KEY (client_user_id) REFERENCES client_user (user_id)
+);
+
+
+-- Auto increment sequencies
+CREATE SEQUENCE seq_person_place_id;
+CREATE SEQUENCE seq_employee_branch_id;
+CREATE SEQUENCE seq_account_branch_id;
+CREATE SEQUENCE seq_account_employee_id;
+CREATE SEQUENCE seq_account_clientUser_id;
+CREATE SEQUENCE seq_account_accountType_id;
+CREATE SEQUENCE seq_account_currency_id;
+
+
+-- Insert data
 INSERT INTO place VALUES (0, 'adr0', 'Čobolo city', 'Slovakia','63500');
+
+INSERT INTO person VALUES (0, 'Ondřej', 'Novák', '010203/1234', 'M', '3.2.2001',seq_person_place_id.nextval);
+INSERT INTO person VALUES (1, 'Anna', 'Suchá', '010263/4567', 'F', '3.2.2001',seq_person_place_id.nextval);
+INSERT INTO person VALUES (2, 'Antonín', 'Novák', '030204/1111', 'M', '4.2.2003',seq_person_place_id.nextval);
+
 INSERT INTO client VALUES (0);
 INSERT INTO client VALUES (1);
 INSERT INTO client VALUES (2);
-INSERT INTO employee VALUES (0, 'position_list', 42000.00, 0, '1.1.2020', null);
-INSERT INTO employee VALUES (1, 'position_list', 69000, 42, '2.2.2020', '3.2.2022');
+
+INSERT INTO employee VALUES (0, 'position_list', 42000.00, 0, '1.1.2020', null,seq_employee_branch_id.nextval);
+INSERT INTO employee VALUES (1, 'position_list', 69000, 42, '2.2.2020', '3.2.2022',seq_employee_branch_id.nextval);
+
 INSERT INTO account VALUES (0, '1245/0000164548/6100', '123456489790', 15422.03, 1);
 INSERT INTO account VALUES (1, '1245/0000164549/6100', '6546546546546', 0.03, 0);
+
 INSERT INTO currency VALUES(0, 'EUR', 1);
 INSERT INTO currency VALUES(1, 'CZK', 0.041);
+
 INSERT INTO client_user VALUES (0, 'turbomost', 'heslo123');
 INSERT INTO client_user VALUES (1, 'blackwolf', 'IFJ_is_easy');
+
 INSERT INTO account_type VALUES (0, 'bezny', '0');
 INSERT INTO account_type VALUES (1, 'sporici', '0');
 INSERT INTO account_type VALUES (2, 'platinum', '1000');
+
 INSERT INTO bank VALUES (0, 'Equa bank', '6100', '12345678', 'EKOPHSUI');
 INSERT INTO bank VALUES (1, 'KB', '6600', '11223344', 'WAUZGR');
+
 INSERT INTO branch VALUES (0, 'branch_adr', 'Brno', 'Czechia', '123456789');
 INSERT INTO branch VALUES (1, 'branch_adr_2', 'Brno', 'Czechia', '123456778');
+
 INSERT INTO payment_card VALUES (0, '0000111122223333', '01/23', '123', 1, null, null, null, null);
 INSERT INTO payment_card VALUES (1, '0000111122224444', '01/22', '123', 0, 69000.00, 69000.00, 69000.00, 69000.00);
+
 INSERT INTO card_type VALUES (0, 'VISA standard', 'VISA', 0, 'ahoj');
 INSERT INTO card_type VALUES (1, 'VISA gold', 'VISA', 2000.00, 'gold club');
 INSERT INTO card_type VALUES (2, 'MasterCard standard', 'MasterCard', 0, 'pleb club');
+
 INSERT INTO operation VALUES (0, 'op_type_list', 123.00, '1.1.2022', 0, 'CZ0212345678351');
 
 COMMIT;

@@ -1,6 +1,6 @@
--- DROP all custom tables that exists
--- -942 == trying to drop non-existing table -> ignoring exception
--- if the DROP fails for some other reason -> the exception is still raised
+-- DROP all custom tables that exists from declared array
+-- DROP all sequences from user_sequences
+-- Create all custom sequences from the array
 
 BEGIN
     DECLARE
@@ -10,8 +10,12 @@ BEGIN
             'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service', 'currency',
             'rules', 'account_service'
             );
-        BEGIN
+    BEGIN
+        FOR s IN (SELECT sequence_name FROM user_sequences) LOOP
+            EXECUTE IMMEDIATE ('DROP SEQUENCE ' || s.sequence_name);
+        END LOOP;
         FOR i IN 1..array.count LOOP
+            EXECUTE IMMEDIATE ('CREATE SEQUENCE seq_' || array(i) || '_id');
             BEGIN
                 EXECUTE IMMEDIATE ('DROP TABLE ' || array(i) || ' CASCADE CONSTRAINTS');
             EXCEPTION
@@ -28,7 +32,7 @@ CREATE TABLE person (
     person_id int primary key,
     first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')),
     last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')),
-    personal_id varchar(255) unique CHECK (regexp_like(personal_id,'^\d{6}/\d{4}$')),
+    personal_id varchar(255) unique CHECK (regexp_like(personal_id,'^\d{6}/\d{3,4}$')),
     gender char CHECK (gender in ('M', 'F')),
     date_of_birth date,
     place_id int null --FK
@@ -50,8 +54,8 @@ CREATE TABLE employee(
 
 CREATE TABLE account(
     account_id int primary key,
-    account_number varchar(22) unique,
-    IBAN varchar(30) unique,
+    account_number varchar(22) CHECK (regexp_like(account_number,'^[0-9]{6}/[0-9]{10}/[0-9]{4}$')),
+    IBAN varchar(30) unique CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
     balance decimal(10, 2),
     is_active int CHECK ( is_active IN (0, 1)),
     branch_id int null, --FK
@@ -64,7 +68,7 @@ CREATE TABLE account(
 CREATE TABLE client_user(
     user_id int primary key,
     username varchar(32),
-    password varchar(32),
+    password varchar(128),
     client_id int null --FK
 );
 
@@ -87,13 +91,13 @@ CREATE TABLE branch(
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    phone_number varchar(10) CHECK (regexp_like(phone_number, '^\d{9}$')),
+    phone_number varchar(13) CHECK (regexp_like(phone_number, '^\+\d{12}$')),
     bank_id int null --FK
 );
 
 CREATE TABLE payment_card(
     payment_card_id int primary key,
-    card_number varchar(16) unique,
+    card_number varchar(16) unique CHECK(regexp_like(card_number, '^(4[0-9]{12}([0-9]{3})?|5[1-5][0-9]{14})$')),
     expiration_date varchar(5) unique,
     CVV varchar(3),
     is_active int CHECK ( is_active IN (0, 1)),
@@ -120,7 +124,7 @@ CREATE TABLE operation(
     amount decimal(10, 2),
     was_created_at date,
     is_done int CHECK ( is_done IN (0, 1) ),
-    IBAN varchar(30),
+    IBAN varchar(30) CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
     account_id int null , --FK
     currency_id int null --FK
 );
@@ -136,13 +140,13 @@ CREATE TABLE place(
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    postal_code integer CHECK (regexp_like(postal_code, '^\d{5}$'))
+    postal_code varchar(255) CHECK (regexp_like(postal_code, '^\d{5}$'))
 );
 
 CREATE TABLE contact_info(
     contact_id int primary key,
-    phone_number varchar(10) unique CHECK (regexp_like(phone_number, '^\d{9}$')),
-    email varchar(255) unique CHECK (regexp_like(email,'^(c /^\S+@\S+\.\S+$/'))
+    phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^\+\d{12}$')),
+    email varchar(255) unique --CHECK (regexp_like(email,'^c /^\S+@\S+\.\S+$/'))
 );
 
 CREATE TABLE service(
@@ -216,57 +220,85 @@ CREATE TABLE rules (
     CONSTRAINT fk_clientUser_rules FOREIGN KEY (client_user_id) REFERENCES client_user (user_id)
 );
 
-
--- Auto increment sequencies
-CREATE SEQUENCE seq_person_place_id;
-CREATE SEQUENCE seq_employee_branch_id;
-CREATE SEQUENCE seq_account_branch_id;
-CREATE SEQUENCE seq_account_employee_id;
-CREATE SEQUENCE seq_account_clientUser_id;
-CREATE SEQUENCE seq_account_accountType_id;
-CREATE SEQUENCE seq_account_currency_id;
-
-
 -- Insert data
-INSERT INTO place VALUES (0, 'adr0', 'Čobolo city', 'Slovakia','63500');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Božetěchova 2', 'Brno', 'Czechia', '61200');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Vrázova 973', 'Prague', 'Czechia', '15000');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Krátka 6', 'Bratislava', 'Slovakia', '81103');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Brezová 483', 'Košice', 'Slovakia', '04001');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '77900');
 
-INSERT INTO person VALUES (0, 'Ondřej', 'Novák', '010203/1234', 'M', '3.2.2001',seq_person_place_id.nextval);
-INSERT INTO person VALUES (1, 'Anna', 'Suchá', '010263/4567', 'F', '3.2.2001',seq_person_place_id.nextval);
-INSERT INTO person VALUES (2, 'Antonín', 'Novák', '030204/1111', 'M', '4.2.2003',seq_person_place_id.nextval);
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420734916785', 'ondrej.novak@mail.com');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420600435980', 'novak.andrej123@gmail.com');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420550604800', 'suchaa@seznam.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421723014059', '681455@fit.vutbr.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421639822019', 'marian1@email.cz');
 
-INSERT INTO client VALUES (0);
-INSERT INTO client VALUES (1);
-INSERT INTO client VALUES (2);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010710/2831', 'M', '10.7.2001', 1);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Andrej', 'Novák', '510527/371', 'M', '27.5.1951', 1);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Anna', 'Suchá', '045111/6996', 'F', '11.1.2004', 2);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Mária', 'Horváthová', '315216/557', 'F', '16.2.1931', 3);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Marián', 'Mráz', '861219/9761', 'M', '19.12.1986', 4);
 
-INSERT INTO employee VALUES (0, 'position_list', 42000.00, 0, '1.1.2020', null,seq_employee_branch_id.nextval);
-INSERT INTO employee VALUES (1, 'position_list', 69000, 42, '2.2.2020', '3.2.2022',seq_employee_branch_id.nextval);
+INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'EUR', 1);
+INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'CZK', 0.040);
+INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'USD', 0.89);
+INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'JPY', 0.0077);
+INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'BTC', 36618.24);
 
-INSERT INTO account VALUES (0, '1245/0000164548/6100', '123456489790', 15422.03, 1);
-INSERT INTO account VALUES (1, '1245/0000164549/6100', '6546546546546', 0.03, 0);
+INSERT INTO account_type VALUES (SEQ_ACCOUNT_TYPE_ID.nextval, 'Checking Account', '0');
+INSERT INTO account_type VALUES (SEQ_ACCOUNT_TYPE_ID.nextval, 'Savings Account', '0');
+INSERT INTO account_type VALUES (SEQ_ACCOUNT_TYPE_ID.nextval, 'Market Deposit Account', '400');
 
-INSERT INTO currency VALUES(0, 'EUR', 1);
-INSERT INTO currency VALUES(1, 'CZK', 0.041);
+INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'VISA standard', 'VISA', 1000, 'Standart VISA card');
+INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'VISA premium', 'VISA', 0, 'VISA card for premium account');
+INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard standard', 'MasterCard', 1000, 'Standart MasterCard card');
+INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard premium', 'MasterCard', 10000, 'Premium MasterCard card') ;
+INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard platinum', 'MasterCard', 0, 'Platinum MasterCard card');
 
-INSERT INTO client_user VALUES (0, 'turbomost', 'heslo123');
-INSERT INTO client_user VALUES (1, 'blackwolf', 'IFJ_is_easy');
+INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Equa bank a.s.', '6100', '47116102', 'QBKCZPP');
+INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Home Credit a.s.', '6000', '26978636', 'HCFBRUMM');
+INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Fio banka, a.s.', '2010', '61858374', 'FIOBCZPP');
+INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Slovenská sporitelna, a.s.', '0900', '00151653', 'GIBASKBX');
+INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'mBank S.A.', '6210', '27943445', 'BREXCZPP');
 
-INSERT INTO account_type VALUES (0, 'bezny', '0');
-INSERT INTO account_type VALUES (1, 'sporici', '0');
-INSERT INTO account_type VALUES (2, 'platinum', '1000');
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Joštova 137', 'Brno', 'Czechia', '+420222010540', 1);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Nevädzová 6', 'Bratislava', 'Slovakia', '+421850638171', 2);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Hlavná 8', 'Košice', 'Slovakia', '+421220850438', 3);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Námestie slobody 24', 'Skalica', 'Slovakia', '+421850111888', 4);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '+420585757003', 5);
 
-INSERT INTO bank VALUES (0, 'Equa bank', '6100', '12345678', 'EKOPHSUI');
-INSERT INTO bank VALUES (1, 'KB', '6600', '11223344', 'WAUZGR');
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4500, 0, '1.7.2005', '20.3.2009', 1);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4800, 20, '21.3.2009', null, 1);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Manager', 3000, 10, '31.1.2019', null, 2);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Financial Advisor', 2200, 2, '6.6.2018', null, 4);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Personal banker', 1520, 15, '1.5.2022', null, 3);
 
-INSERT INTO branch VALUES (0, 'branch_adr', 'Brno', 'Czechia', '123456789');
-INSERT INTO branch VALUES (1, 'branch_adr_2', 'Brno', 'Czechia', '123456778');
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
 
-INSERT INTO payment_card VALUES (0, '0000111122223333', '01/23', '123', 1, null, null, null, null);
-INSERT INTO payment_card VALUES (1, '0000111122224444', '01/22', '123', 0, 69000.00, 69000.00, 69000.00, 69000.00);
+INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1121649', '2568a7f8c522e81121f2adc91bd8fc8f9a7ce063a83580829528f3f2d17fb0b8', 1);
+INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '2209634', '2568a7f8c522e81121f2adc91bd8fc8f9a7ce063a83580829528f3f2d17fb0b8', 1);
+INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1136925', 'b136aaeddc0c37ed03158551378dca895834d1cef68d642dafea4251ae8480dd', 2);
+INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1963482', 'abf67d1bc217bba7fd014b91f24009c9bc177ef6675b7480d4839f1d8815b81f', 3);
+INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1682334', 'd566c130da1011180b3584e22d60dd0cfae250fa1e030bfa68cce593a1efa9f1', 4);
+INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1210801', '4a3ca91f11c4ade33cca71eabf4f179a9f74f05b09367612256aa9428bcf602e', 5);
 
-INSERT INTO card_type VALUES (0, 'VISA standard', 'VISA', 0, 'ahoj');
-INSERT INTO card_type VALUES (1, 'VISA gold', 'VISA', 2000.00, 'gold club');
-INSERT INTO card_type VALUES (2, 'MasterCard standard', 'MasterCard', 0, 'pleb club');
+INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '000000/1030432706/6100', 'CZ7661000000001030432706', 531.20, 1, 1, 4, 1, 1, 2);
+INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '670100/2216739313/6210', 'CZ5262106701002216739313', 2999.00, 0, 5, 3, 2, 1, 2);
+INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '000000/5134779323/0900', 'SK4709000000005134779323', 150020.90, 0, 4, 4, 1, 1, 1);
 
-INSERT INTO operation VALUES (0, 'op_type_list', 123.00, '1.1.2022', 0, 'CZ0212345678351');
+INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '4801769871971639', '07/25', '656', 1,
+                                 null, null, null, null, 1, 1, 1);
+INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5349804471300347', '04/28', '908', 0,
+                                 69000.00, 69000.00, 69000.00, 69000.00, 2, 3, 1);
+INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '09/22', '679', 0,
+                                 69000.00, 69000.00, 69000.00, 69000.00, 3, 3, 4);
+
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'type1', 123.00, '1.1.2022', 0, 'SK4709000000005134779323', 1, 1);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'type2', 124.00, '1.1.2022', 1, 'SK4709000000005134779323', 3, 1);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'type3', 456.00, '1.1.2022', 0, 'CZ5262106701002216739313', 2, 2);
 
 COMMIT;

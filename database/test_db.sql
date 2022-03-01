@@ -125,14 +125,14 @@ CREATE TABLE operation(
     was_created_at date,
     is_done int CHECK ( is_done IN (0, 1) ),
     IBAN varchar(30) CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
-    account_id int null , --FK
+    account_id int null, --FK
     currency_id int null --FK
 );
 
 CREATE TABLE currency(
     currency_id int primary key,
     name varchar(40),
-    exchange_rate decimal(10,5)
+    exchange_rate decimal(10, 5)
 );
 
 CREATE TABLE place(
@@ -146,7 +146,7 @@ CREATE TABLE place(
 CREATE TABLE contact_info(
     contact_id int primary key,
     phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^\+\d{12}$')),
-    email varchar(255) unique --CHECK (regexp_like(email,'^c /^\S+@\S+\.\S+$/'))
+    email varchar(255) unique CHECK (regexp_like(email,'^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$'))
 );
 
 CREATE TABLE service(
@@ -171,7 +171,7 @@ ALTER TABLE client ADD (
 
 ALTER TABLE employee ADD (
     CONSTRAINT fk_person_employee FOREIGN KEY (employee_id) REFERENCES person (person_id) ON DELETE CASCADE,
-    CONSTRAINT fk_branch_employee FOREIGN KEY (branch_id) references branch (branch_id) ON DELETE CASCADE
+    CONSTRAINT fk_branch_employee FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE CASCADE
     );
 
 ALTER TABLE person ADD (
@@ -188,7 +188,7 @@ ALTER TABLE account ADD (
     );
 
 ALTER TABLE client_user ADD (
-    CONSTRAINT fk_client_clientuser FOREIGN KEY (client_id) REFERENCES client (client_id) ON DELETE CASCADE
+    CONSTRAINT fk_client_clientUser FOREIGN KEY (client_id) REFERENCES client (client_id) ON DELETE CASCADE
     );
 
 ALTER TABLE payment_card ADD (
@@ -290,15 +290,15 @@ INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '000000/1030432706/6100', 'C
 INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '670100/2216739313/6210', 'CZ5262106701002216739313', 2999.00, 0, 5, 3, 2, 1, 2);
 INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '000000/5134779323/0900', 'SK4709000000005134779323', 150020.90, 0, 4, 4, 1, 1, 1);
 
-INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '4801769871971639', '07/25', '656', 1,
-                                 null, null, null, null, 1, 1, 1);
-INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5349804471300347', '04/28', '908', 0,
-                                 69000.00, 69000.00, 69000.00, 69000.00, 2, 3, 1);
-INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '09/22', '679', 0,
-                                 69000.00, 69000.00, 69000.00, 69000.00, 3, 3, 4);
+INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '4801769871971639', '07/25', '656', 1, 10000.00, 10000.00, 10000.00, 40000.00, 3, 5, 1);
+INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5349804471300347', '04/28', '908', 1, 100.00, 0.00, 100.00, 200.00, 1, 1, 1);
+INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '09/22', '679', 1, 2000.00, 0.00, 0.00, 2000.00, 2, 1, 2);
 
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'type1', 123.00, '1.1.2022', 0, 'SK4709000000005134779323', 1, 1);
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'type2', 124.00, '1.1.2022', 1, 'SK4709000000005134779323', 3, 1);
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'type3', 456.00, '1.1.2022', 0, 'CZ5262106701002216739313', 2, 2);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', 1, null, 3, 3);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', 1, null, 2, 4);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', 1, null, 1, 2);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 300.00, '10.1.2022', 1, 'SK4709000000005134779323', 1, 1);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1350.00, '1.1.2022', 0, 'SK4709000000005134779323', 3, 1);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', 0, 'CZ5262106701002216739313', 2, 2);
 
 COMMIT;

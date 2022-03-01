@@ -32,7 +32,7 @@ CREATE TABLE person (
     person_id int primary key,
     first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')),
     last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')),
-    personal_id varchar(255) unique CHECK (regexp_like(personal_id,'^\d{6}/\d{3,4}$')),
+    personal_id varchar(255) unique CHECK (regexp_like(personal_id,'^[0-9]{6}/[0-9]{3,4}$')),
     gender char CHECK (gender in ('M', 'F')),
     date_of_birth date,
     place_id int null --FK
@@ -57,7 +57,7 @@ CREATE TABLE account(
     account_number varchar(22) CHECK (regexp_like(account_number,'^[0-9]{6}/[0-9]{10}/[0-9]{4}$')),
     IBAN varchar(30) unique CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
     balance decimal(10, 2),
-    is_active int CHECK ( is_active IN (0, 1)),
+    is_active int CHECK (is_active IN (0, 1)),
     branch_id int null, --FK
     employee_id int null, --FK
     client_user_id int null, --FK
@@ -67,7 +67,7 @@ CREATE TABLE account(
 
 CREATE TABLE client_user(
     user_id int primary key,
-    username varchar(32),
+    username varchar(7) unique CHECK (regexp_like(username, '^[0-9]{7}$')),
     password varchar(128),
     client_id int null --FK
 );
@@ -81,9 +81,9 @@ CREATE TABLE account_type(
 CREATE TABLE bank(
     bank_id int primary key,
     name varchar(255) unique,
-    bank_code int unique,
-    ICO int unique,
-    swift_code varchar(20) unique
+    bank_code varchar(4) unique CHECK (regexp_like(bank_code, '^[0-9]{4}$')),
+    ICO varchar(8) unique CHECK (regexp_like(ICO, '^[0-9]{8}$')),
+    swift_code varchar(20) unique CHECK (regexp_like(swift_code, '^([A-Z]|[0-9]){8,11}$'))
 );
 
 CREATE TABLE branch(
@@ -91,16 +91,16 @@ CREATE TABLE branch(
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    phone_number varchar(13) CHECK (regexp_like(phone_number, '^\+\d{12}$')),
+    phone_number varchar(13) CHECK (regexp_like(phone_number, '^\+[0-9]{12}$')),
     bank_id int null --FK
 );
 
 CREATE TABLE payment_card(
     payment_card_id int primary key,
     card_number varchar(16) unique CHECK(regexp_like(card_number, '^(4[0-9]{12}([0-9]{3})?|5[1-5][0-9]{14})$')),
-    expiration_date varchar(5) unique,
-    CVV varchar(3),
-    is_active int CHECK ( is_active IN (0, 1)),
+    expiration_date varchar(5) unique CHECK (regexp_like(expiration_date, '^((1[0-2])|(0[1-9]))/[0-9]{2}$')),
+    CVV varchar(3) CHECK (regexp_like(CVV, '^[0-9]{3}$')),
+    is_active int CHECK (is_active IN (0, 1)),
     withdrawal_limit decimal(10, 2),
     mo_to_limit decimal(10, 2),
     proximity_payment_limit decimal(10, 2),
@@ -120,10 +120,10 @@ CREATE TABLE card_type(
 
 CREATE TABLE operation(
     operation_id int primary key,
-    operation_type varchar(32),
+    operation_type varchar(32) CHECK (operation_type IN ('withdrawal', 'deposit', 'payment')),
     amount decimal(10, 2),
     was_created_at date,
-    is_done int CHECK ( is_done IN (0, 1) ),
+    is_done int CHECK (is_done IN (0, 1)),
     IBAN varchar(30) CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
     account_id int null, --FK
     currency_id int null --FK
@@ -140,12 +140,12 @@ CREATE TABLE place(
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    postal_code varchar(255) CHECK (regexp_like(postal_code, '^\d{5}$'))
+    postal_code varchar(255) CHECK (regexp_like(postal_code, '^[0-9]{5}$'))
 );
 
 CREATE TABLE contact_info(
     contact_id int primary key,
-    phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^\+\d{12}$')),
+    phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^\+[0-9]{12}$')),
     email varchar(255) unique CHECK (regexp_like(email,'^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$'))
 );
 
@@ -255,7 +255,7 @@ INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard standard', '
 INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard premium', 'MasterCard', 10000, 'Premium MasterCard card') ;
 INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard platinum', 'MasterCard', 0, 'Platinum MasterCard card');
 
-INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Equa bank a.s.', '6100', '47116102', 'QBKCZPP');
+INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Equa bank a.s.', '6100', '47116102', 'EQBKCZPP');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Home Credit a.s.', '6000', '26978636', 'HCFBRUMM');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Fio banka, a.s.', '2010', '61858374', 'FIOBCZPP');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Slovenská sporitelna, a.s.', '0900', '00151653', 'GIBASKBX');

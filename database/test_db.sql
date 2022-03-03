@@ -32,7 +32,20 @@ CREATE TABLE person (
     person_id int primary key,
     first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')),
     last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')),
-    personal_id varchar(255) unique CHECK (regexp_like(personal_id,'^[0-9]{6}/[0-9]{3,4}$')),
+    personal_id varchar(255) unique CHECK (
+        -- After six digits and slash cannot be 000, but can be 0000
+        -- If day > 40 then month can only be 0x 1x 5x 6x
+        -- If day > 40 then >600 OR >6000
+        -- Normal date validation, month can be +20, +50 or +70, day can be +40
+        -- If month is 2x 3x 7x or 8x then year must be higher or equal 2004 (year 04 and more and 4 digits after slash)
+        -- Check MOD 11 for 10 digits
+        regexp_like(personal_id,'^(([0-9]{6})/(([1-9][0-9][0-9]|[0-9][1-9][0-9]|[0-9][0-9][1-9])|([0-9]{4})))$')
+        AND (regexp_like(personal_id,'^([0-9]{2}(([1056][0-9][4-9][0-9])|([0-9]{2}[0123][0-9]))/[0-9]{3,4})$')
+        AND (regexp_like(personal_id,'^([0-9]{4}(([4-9][0-9]/[6-9][0-9]{2,3})|([0-3][0-9]/[0-9]{3,4})))$')
+        AND (regexp_like(personal_id,'^([0-9]{2}(((([0257][13578])|([1368][02]))(([04][1-9])|([1256][0-9])|([37][01])))|((([0257][469])|[1368]1)(([04][1-9])|([1256][0-9])|([37]0)))|([0257]2(([04][1-9])|([15][0-9])|([26][0-8]))))/[0-9]{3,4})$')
+        AND (regexp_like(personal_id,'^((((0[4-9])|([1-4][0-9])|(5[0-3]))([2378][0-9]{3})(/[0-9]{4}))|(([0-9]{2})([0156][0-9]{3})(/[0-9]{3,4})))$')
+        AND (regexp_like(personal_id, '^[0-9]{6}/[0-9]{4}$') AND MOD(replace(personal_id,'/',''), 11) IN 0
+            OR (regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}$')))))))),
     gender char CHECK (gender in ('M', 'F')),
     date_of_birth date,
     place_id int null --FK
@@ -47,7 +60,7 @@ CREATE TABLE employee(
     work_position varchar(255),
     salary decimal(10, 2),
     holidays_left int,
-    started_at date,
+  started_at date,
     ended_at date,
     branch_id int null --FK
 );
@@ -268,7 +281,7 @@ INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Námestie slobody 24', 'Skali
 INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '+420585757003', 5);
 
 INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4500, 0, '1.7.2005', '20.3.2009', 1);
-INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4800, 20, '21.3.2009', null, 1);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4800, 22, '21.3.2009', null, 1);
 INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Manager', 3000, 10, '31.1.2019', null, 2);
 INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Financial Advisor', 2200, 2, '6.6.2018', null, 4);
 INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Personal banker', 1520, 15, '1.5.2022', null, 3);

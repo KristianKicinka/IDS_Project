@@ -33,19 +33,24 @@ CREATE TABLE person (
     first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')),
     last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')),
     personal_id varchar(255) unique CHECK (
+
         -- After six digits and slash cannot be 000, but can be 0000
         -- If day > 40 then month can only be 0x 1x 5x 6x
-        -- If day > 40 then >600 OR >6000
+        -- If day > 40 then >=600 OR >=6000
         -- Normal date validation, month can be +20, +50 or +70, day can be +40
+        -- Leap year validation for february (if year is 2000 or multiple of 4 but not multiple of 100)
         -- If month is 2x 3x 7x or 8x then year must be higher or equal 2004 (year 04 and more and 4 digits after slash)
-        -- Check MOD 11 for 10 digits
+        -- If 10 digits then check if mod 11 = 0 OR if mod 11 of substr is 10 and last digit is 0
+
         regexp_like(personal_id,'^(([0-9]{6})/(([1-9][0-9][0-9]|[0-9][1-9][0-9]|[0-9][0-9][1-9])|([0-9]{4})))$')
         AND (regexp_like(personal_id,'^([0-9]{2}(([1056][0-9][4-9][0-9])|([0-9]{2}[0123][0-9]))/[0-9]{3,4})$')
         AND (regexp_like(personal_id,'^([0-9]{4}(([4-9][0-9]/[6-9][0-9]{2,3})|([0-3][0-9]/[0-9]{3,4})))$')
-        AND (regexp_like(personal_id,'^([0-9]{2}(((([0257][13578])|([1368][02]))(([04][1-9])|([1256][0-9])|([37][01])))|((([0257][469])|[1368]1)(([04][1-9])|([1256][0-9])|([37]0)))|([0257]2(([04][1-9])|([15][0-9])|([26][0-8]))))/[0-9]{3,4})$')
-        AND (regexp_like(personal_id,'^((((0[4-9])|([1-4][0-9])|(5[0-3]))([2378][0-9]{3})(/[0-9]{4}))|(([0-9]{2})([0156][0-9]{3})(/[0-9]{3,4})))$')
-        AND (regexp_like(personal_id, '^[0-9]{6}/[0-9]{4}$') AND MOD(replace(personal_id,'/',''), 11) IN 0
-            OR (regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}$')))))))),
+        AND ((regexp_like(personal_id,'^([0-9]{2}(((([0257][13578])|([1368][02]))(([04][1-9])|([1256][0-9])|([37][01])))|((([0257][469])|[1368]1)(([04][1-9])|([1256][0-9])|([37]0)))|([0257]2(([04][1-9])|([15][0-9])|([26][0-8]))))/[0-9]{3,4})$')
+            OR (regexp_like(personal_id, '^(00[0257]2[26]9/[0-9]{4})|(((0[48]|[2468][048])|([13579][26]))0229/[0-9]{3,4})$')))
+        AND ((regexp_like(personal_id,'^((((0[4-9])|([1-4][0-9])|(5[0-3]))([2378][0-9]{3})(/[0-9]{4}))|(([0-9]{2})([0156][0-9]{3})(/[0-9]{3,4})))$')
+        AND ((regexp_like(personal_id, '^[0-9]{6}/[0-9]{4}$') AND MOD(replace(personal_id,'/',''), 11) IN 0)
+            OR ((regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}0$') AND MOD(SUBSTR(replace(personal_id, '/', ''), 1, 9), 11) IN 10)
+                OR(regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}$')))))))))),
     gender char CHECK (gender in ('M', 'F')),
     date_of_birth date,
     place_id int null --FK
@@ -246,7 +251,15 @@ INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420550604800', '
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421723014059', '681455@fit.vutbr.cz');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421639822019', 'marian1@email.cz');
 
-INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010710/2831', 'M', '10.7.2001', 1);
+-- INVALID FORMATS --
+--INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010724/000', 'M', null, 1);     -- /000
+--INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '012740/6831', 'M', null, 1);    -- Day > 40 but +20 month
+--INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010740/2831', 'M', null, 1);    -- Day > 40 but last digits < 6000
+--INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010229/2831', 'M', null, 1);    -- Invalid date 29.02.2001
+--INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '017710/2870', 'M', null, 1);    -- +20 month but year < 2004
+--INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010710/2832', 'M', null, 1);    -- Not divisible by 11
+
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '000229/2830', 'M', '10.7.2001', 1);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Andrej', 'Novák', '510527/371', 'M', '27.5.1951', 1);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Anna', 'Suchá', '045111/6996', 'F', '11.1.2004', 2);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Mária', 'Horváthová', '315216/557', 'F', '16.2.1931', 3);

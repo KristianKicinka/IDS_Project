@@ -65,7 +65,7 @@ CREATE TABLE employee(
     work_position varchar(255),
     salary decimal(10, 2),
     holidays_left int,
-  started_at date,
+    started_at date,
     ended_at date,
     branch_id int null --FK
 );
@@ -101,7 +101,7 @@ CREATE TABLE bank(
     name varchar(255) unique,
     bank_code varchar(4) unique CHECK (regexp_like(bank_code, '^[0-9]{4}$')),
     ICO varchar(8) unique CHECK (regexp_like(ICO, '^[0-9]{8}$')),
-    swift_code varchar(20) unique CHECK (regexp_like(swift_code, '^([A-Z]|[0-9]){8,11}$'))
+    swift_code varchar(20) unique CHECK (regexp_like(swift_code, '^([A-Z]{4}(CZ|SK)([0-9]|[A-Z]){2})$'))
 );
 
 CREATE TABLE branch(
@@ -117,7 +117,7 @@ CREATE TABLE payment_card(
     payment_card_id int primary key,
     card_number varchar(16) unique CHECK(regexp_like(card_number, '^(4[0-9]{12}([0-9]{3})?|5[1-5][0-9]{14})$')),
     expiration_date varchar(5) unique CHECK (regexp_like(expiration_date, '^((1[0-2])|(0[1-9]))/[0-9]{2}$')),
-    CVV varchar(3) CHECK (regexp_like(CVV, '^[0-9]{3}$')),
+    CVV varchar(3) CHECK (regexp_like(CVV, '^[0-9]{3,4}$')),
     is_active int CHECK (is_active IN (0, 1)),
     withdrawal_limit decimal(10, 2),
     mo_to_limit decimal(10, 2),
@@ -282,7 +282,7 @@ INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard premium', 'M
 INSERT INTO card_type VALUES (SEQ_CARD_TYPE_ID.nextval, 'MasterCard platinum', 'MasterCard', 0, 'Platinum MasterCard card');
 
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Equa bank a.s.', '6100', '47116102', 'EQBKCZPP');
-INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Home Credit a.s.', '6000', '26978636', 'HCFBRUMM');
+INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Home Credit a.s.', '6000', '26978636', 'PMBPCZPP');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Fio banka, a.s.', '2010', '61858374', 'FIOBCZPP');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Slovenská sporitelna, a.s.', '0900', '00151653', 'GIBASKBX');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'mBank S.A.', '6210', '27943445', 'BREXCZPP');

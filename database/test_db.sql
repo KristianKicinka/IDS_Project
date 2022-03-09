@@ -2,6 +2,14 @@
 -- DROP all sequences from user_sequences
 -- Create all custom sequences from the array
 
+/*
+BEGIN
+    FOR s IN (SELECT TABLE_NAME FROM USER_TABLES) LOOP
+        EXECUTE IMMEDIATE ('DROP TABLE ' || s.TABLE_NAME || ' CASCADE CONSTRAINTS');
+    END LOOP;
+END;
+*/
+
 BEGIN
     DECLARE
         type array_t is varray(40) of varchar2(100);
@@ -36,11 +44,11 @@ CREATE TABLE person (
 
         -- After six digits and slash cannot be 000, but can be 0000
         -- If day > 40 then month can only be 0x 1x 5x 6x
-        -- If day > 40 then >=600 OR >=6000
-        -- Normal date validation, month can be +20, +50 or +70, day can be +40
+        -- If day > 40 then last digits >=600 OR >=6000
+        -- Normal date validation (day and month combination), month can be +20, +50 or +70, day can be +40
         -- Leap year validation for february (if year is 2000 or multiple of 4 but not multiple of 100)
         -- If month is 2x 3x 7x or 8x then year must be higher or equal 2004 (year 04 and more and 4 digits after slash)
-        -- If 10 digits then check if mod 11 = 0 OR if mod 11 of substr is 10 and last digit is 0
+        -- If 10 digits then check if mod 11 = 0 OR if mod 11 of substring is 10 and last digit is 0
 
         regexp_like(personal_id,'^(([0-9]{6})/(([1-9][0-9][0-9]|[0-9][1-9][0-9]|[0-9][0-9][1-9])|([0-9]{4})))$')
         AND (regexp_like(personal_id,'^([0-9]{2}(([1056][0-9][4-9][0-9])|([0-9]{2}[0123][0-9]))/[0-9]{3,4})$')
@@ -106,10 +114,11 @@ CREATE TABLE bank(
 
 CREATE TABLE branch(
     branch_id int primary key,
+    -- TODO delete useless things
     address varchar(255),
     city varchar(255),
     country varchar(255),
-    phone_number varchar(13) CHECK (regexp_like(phone_number, '^\+[0-9]{12}$')),
+    phone_number varchar(13) CHECK (regexp_like(phone_number, '^((\+)?[0-9]{3})?[0-9]{9}$')),
     bank_id int null --FK
 );
 
@@ -141,6 +150,7 @@ CREATE TABLE operation(
     operation_type varchar(32) CHECK (operation_type IN ('withdrawal', 'deposit', 'payment')),
     amount decimal(10, 2),
     was_created_at date,
+    -- TODO dates
     is_done int CHECK (is_done IN (0, 1)),
     IBAN varchar(30) CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
     account_id int null, --FK
@@ -163,7 +173,7 @@ CREATE TABLE place(
 
 CREATE TABLE contact_info(
     contact_id int primary key,
-    phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^\+[0-9]{12}$')),
+    phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^((\+)?[0-9]{3})?[0-9]{9}$')),
     email varchar(255) unique CHECK (regexp_like(email,'^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$'))
 );
 
@@ -212,7 +222,7 @@ ALTER TABLE client_user ADD (
 ALTER TABLE payment_card ADD (
     CONSTRAINT fk_account_paymentCard FOREIGN KEY (account_id) REFERENCES account (account_id) ON DELETE CASCADE,
     CONSTRAINT fk_cardType_paymentCard FOREIGN KEY (card_type_id) REFERENCES card_type (card_type_id) ON DELETE CASCADE,
-    CONSTRAINT fk_clientUser_paymentCard FOREIGN KEY (client_user_id) REFERENCES client_user (user_id) ON DELETE CASCADE
+    CONSTRAINT fk_clientUser_paymentCard FOREIGN KEY (payment_card_id) REFERENCES client_user (user_id) ON DELETE CASCADE
     );
 
 ALTER TABLE operation ADD (
@@ -259,7 +269,7 @@ INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421639822019', '
 --INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '017710/2870', 'M', null, 1);    -- +20 month but year < 2004
 --INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010710/2832', 'M', null, 1);    -- Not divisible by 11
 
-INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '000229/2830', 'M', '10.7.2001', 1);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '000229/2830', 'M', '29.2.2000', 1);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Andrej', 'Novák', '510527/371', 'M', '27.5.1951', 1);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Anna', 'Suchá', '045111/6996', 'F', '11.1.2004', 2);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Mária', 'Horváthová', '315216/557', 'F', '16.2.1931', 3);
@@ -287,8 +297,8 @@ INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Fio banka, a.s.', '2010', '618583
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Slovenská sporitelna, a.s.', '0900', '00151653', 'GIBASKBX');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'mBank S.A.', '6210', '27943445', 'BREXCZPP');
 
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Joštova 137', 'Brno', 'Czechia', '+420222010540', 1);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Nevädzová 6', 'Bratislava', 'Slovakia', '+421850638171', 2);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Joštova 137', 'Brno', 'Czechia', '222010540', 1);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Nevädzová 6', 'Bratislava', 'Slovakia', '421850638171', 2);
 INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Hlavná 8', 'Košice', 'Slovakia', '+421220850438', 3);
 INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Námestie slobody 24', 'Skalica', 'Slovakia', '+421850111888', 4);
 INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '+420585757003', 5);

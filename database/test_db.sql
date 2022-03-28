@@ -149,8 +149,9 @@ CREATE TABLE operation(
     operation_id int primary key,
     operation_type varchar(32) CHECK (operation_type IN ('withdrawal', 'deposit', 'payment')),
     amount decimal(10, 2),
-    was_created_at date,
-    -- TODO dates
+    create_date date,
+    processed_date date,
+    finished_date date,
     is_done int CHECK (is_done IN (0, 1)),
     IBAN varchar(30) CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
     account_id int null, --FK
@@ -174,7 +175,7 @@ CREATE TABLE place(
 CREATE TABLE contact_info(
     contact_id int primary key,
     phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^((\+)?[0-9]{3})?[0-9]{9}$')),
-    email varchar(255) unique CHECK (regexp_like(email,'^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$'))
+    email varchar(255) unique CHECK (regexp_like(email,'^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$')) null
 );
 
 CREATE TABLE service(
@@ -254,12 +255,22 @@ INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Vrázova 973', 'Prague', 'Czech
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Krátka 6', 'Bratislava', 'Slovakia', '81103');
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Brezová 483', 'Košice', 'Slovakia', '04001');
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '77900');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Joštova 137', 'Brno', 'Czechia', '00000');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Nevädzová 6', 'Bratislava', 'Slovakia', '00000');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Hlavná 8', 'Košice', 'Slovakia', '00000');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Námestie slobody 24', 'Skalica', 'Slovakia', '00000');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '00000');
 
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420734916785', 'ondrej.novak@mail.com');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420600435980', 'novak.andrej123@gmail.com');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420550604800', 'suchaa@seznam.cz');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421723014059', '681455@fit.vutbr.cz');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421639822019', 'marian1@email.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '222010540', null);
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '421850638171', null);
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421220850438', null);
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421850111888', null);
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420585757003', null);
 
 -- INVALID FORMATS --
 --INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010724/000', 'M', null, 1);     -- /000
@@ -269,11 +280,11 @@ INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421639822019', '
 --INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '017710/2870', 'M', null, 1);    -- +20 month but year < 2004
 --INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010710/2832', 'M', null, 1);    -- Not divisible by 11
 
-INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '000229/2830', 'M', '29.2.2000', 1);
-INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Andrej', 'Novák', '510527/371', 'M', '27.5.1951', 1);
-INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Anna', 'Suchá', '045111/6996', 'F', '11.1.2004', 2);
-INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Mária', 'Horváthová', '315216/557', 'F', '16.2.1931', 3);
-INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Marián', 'Mráz', '861219/9761', 'M', '19.12.1986', 4);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '000229/2830', 'M', '29.2.2000', 1, 1);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Andrej', 'Novák', '510527/371', 'M', '27.5.1951', 1, 2);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Anna', 'Suchá', '045111/6996', 'F', '11.1.2004', 2, 3);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Mária', 'Horváthová', '315216/557', 'F', '16.2.1931', 3, 4);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Marián', 'Mráz', '861219/9761', 'M', '19.12.1986', 4, 5);
 
 INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'EUR', 1);
 INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'CZK', 0.040);
@@ -297,23 +308,23 @@ INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Fio banka, a.s.', '2010', '618583
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Slovenská sporitelna, a.s.', '0900', '00151653', 'GIBASKBX');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'mBank S.A.', '6210', '27943445', 'BREXCZPP');
 
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Joštova 137', 'Brno', 'Czechia', '222010540', 1);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Nevädzová 6', 'Bratislava', 'Slovakia', '421850638171', 2);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Hlavná 8', 'Košice', 'Slovakia', '+421220850438', 3);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Námestie slobody 24', 'Skalica', 'Slovakia', '+421850111888', 4);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '+420585757003', 5);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 1, 6, 6);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 2, 7, 7);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 3, 8, 8);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 4, 9, 9);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 5, 10, 10);
 
-INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4500, 0, '1.7.2005', '20.3.2009', 1);
-INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4800, 22, '21.3.2009', null, 1);
-INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Manager', 3000, 10, '31.1.2019', null, 2);
-INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Financial Advisor', 2200, 2, '6.6.2018', null, 4);
-INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Personal banker', 1520, 15, '1.5.2022', null, 3);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4500, 0, '1.7.2005', '20.3.2009', 1, 1);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4800, 22, '21.3.2009', null, 1, 2);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Manager', 3000, 10, '31.1.2019', null, 2, 3);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Financial Advisor', 2200, 2, '6.6.2018', null, 4, 4);
+INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Personal banker', 1520, 15, '1.5.2022', null, 3, 5);
 
-INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
-INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
-INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
-INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
-INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval, 1);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval, 2);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval, 3);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval, 4);
+INSERT INTO client VALUES (SEQ_CLIENT_ID.nextval, 5);
 
 INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1121649', '2568a7f8c522e81121f2adc91bd8fc8f9a7ce063a83580829528f3f2d17fb0b8', 1);
 INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '2209634', '2568a7f8c522e81121f2adc91bd8fc8f9a7ce063a83580829528f3f2d17fb0b8', 1);
@@ -330,11 +341,27 @@ INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '4801769871971639'
 INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5349804471300347', '04/28', '908', 1, 100.00, 0.00, 100.00, 200.00, 1, 1, 1);
 INSERT INTO payment_card VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '09/22', '679', 1, 2000.00, 0.00, 0.00, 2000.00, 2, 1, 2);
 
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', 1, null, 3, 3);
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', 1, null, 2, 4);
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', 1, null, 1, 2);
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 300.00, '10.1.2022', 1, 'SK4709000000005134779323', 1, 1);
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1350.00, '1.1.2022', 0, 'SK4709000000005134779323', 3, 1);
-INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', 0, 'CZ5262106701002216739313', 2, 2);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', '5.6.2021', '5.6.2021', 1, null, 3, 3);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', '6.8.2021', '6.8.2021', 1, null, 2, 4);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', '10.12.2021', '10.12.2021', 1, null, 1, 2);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 300.00, '10.1.2022', '10.1.2022', '11.1.2022', 1, 'SK4709000000005134779323', 1, 1);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1350.00, '1.1.2022', '1.1.2022', '2.1.2022', 0, 'SK4709000000005134779323', 3, 1);
+INSERT INTO operation VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0, 'CZ5262106701002216739313', 2, 2);
+
+INSERT INTO service VALUES (SEQ_SERVICE_ID.nextval, 'Loan', 'Standard loan', 10);
+INSERT INTO service VALUES (SEQ_SERVICE_ID.nextval, 'Monthly account statement', 'Basic account statement0', 5);
+INSERT INTO service VALUES (SEQ_SERVICE_ID.nextval, 'Overdraft', 'Market account basic overdraft', 20);
+INSERT INTO service VALUES (SEQ_SERVICE_ID.nextval, 'Overdraft premium', 'Market account premium overdraft', 50);
+
+INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 4, '1.1.2022');
+INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 2, '30.3.2022');
+INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 1, '28.9.2019');
+INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 3, '1.1.2020');
+
+INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 1000, 3, 1);
+INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 1000, 3, 2);
+INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 20, 3, 3);
+INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 50, 1, 1);
+INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 50, 2, 5);
 
 COMMIT;

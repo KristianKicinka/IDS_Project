@@ -61,11 +61,13 @@ CREATE TABLE person (
                 OR(regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}$')))))))))),
     gender char CHECK (gender in ('M', 'F')),
     date_of_birth date,
-    place_id int null --FK
+    place_id int null, --FK
+    contact_id int null --FK
 );
 
 CREATE TABLE client(
-    client_id int primary key
+    client_id int primary key,
+    person_id int null --FK
 );
 
 CREATE TABLE employee(
@@ -75,7 +77,8 @@ CREATE TABLE employee(
     holidays_left int,
     started_at date,
     ended_at date,
-    branch_id int null --FK
+    branch_id int null, --FK
+    person_id int null --FK
 );
 
 CREATE TABLE account(
@@ -114,12 +117,9 @@ CREATE TABLE bank(
 
 CREATE TABLE branch(
     branch_id int primary key,
-    -- TODO delete useless things
-    address varchar(255),
-    city varchar(255),
-    country varchar(255),
-    phone_number varchar(13) CHECK (regexp_like(phone_number, '^((\+)?[0-9]{3})?[0-9]{9}$')),
-    bank_id int null --FK
+    bank_id int null, --FK
+    place_id int null, --FK
+    contact_id int null --FK
 );
 
 CREATE TABLE payment_card(
@@ -181,29 +181,28 @@ CREATE TABLE service(
     service_id int primary key,
     name varchar(255),
     description varchar(255),
-    activation_date date,
     fee decimal(10, 2)
 );
 
 
 -- Create relationship
 ALTER TABLE branch ADD(
-    CONSTRAINT fk_place_branch FOREIGN KEY (branch_id) REFERENCES place (place_id) ON DELETE CASCADE,
-    CONSTRAINT fk_contact_branch FOREIGN KEY (branch_id) REFERENCES contact_info (contact_id) ON DELETE CASCADE,
+    CONSTRAINT fk_place_branch FOREIGN KEY (place_id) REFERENCES place (place_id) ON DELETE CASCADE,
+    CONSTRAINT fk_contact_branch FOREIGN KEY (contact_id) REFERENCES contact_info (contact_id) ON DELETE CASCADE,
     CONSTRAINT fk_bank_branch FOREIGN KEY (bank_id) REFERENCES bank (bank_id) ON DELETE CASCADE
     );
 
 ALTER TABLE client ADD (
-    CONSTRAINT fk_person_client FOREIGN KEY (client_id) REFERENCES person (person_id) ON DELETE CASCADE
+    CONSTRAINT fk_person_client FOREIGN KEY (person_id) REFERENCES person (person_id) ON DELETE CASCADE
     );
 
 ALTER TABLE employee ADD (
-    CONSTRAINT fk_person_employee FOREIGN KEY (employee_id) REFERENCES person (person_id) ON DELETE CASCADE,
+    CONSTRAINT fk_person_employee FOREIGN KEY (person_id) REFERENCES person (person_id) ON DELETE CASCADE,
     CONSTRAINT fk_branch_employee FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE CASCADE
     );
 
 ALTER TABLE person ADD (
-    CONSTRAINT fk_contact_person FOREIGN KEY (person_id) REFERENCES contact_info (contact_id) ON DELETE CASCADE,
+    CONSTRAINT fk_contact_person FOREIGN KEY (contact_id) REFERENCES contact_info (contact_id) ON DELETE CASCADE,
     CONSTRAINT fk_place_person FOREIGN KEY (place_id) REFERENCES place (place_id) ON DELETE CASCADE
     );
 
@@ -235,6 +234,7 @@ CREATE TABLE account_service (
     id int primary key,
     account_id int,
     service_id int,
+    activation_date date,
     CONSTRAINT fk_account_accountService FOREIGN KEY (account_id) REFERENCES account (account_id),
     CONSTRAINT fk_service_accountService FOREIGN KEY (service_id) REFERENCES service (service_id)
 );

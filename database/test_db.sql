@@ -38,8 +38,8 @@ END;
 
 CREATE TABLE person (
     person_id int primary key,
-    first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')),
-    last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')),
+    first_name varchar(255) CHECK (regexp_like(first_name,'^[[:alpha:]]+$')) not null,
+    last_name varchar(255) CHECK (regexp_like(last_name,'^[[:alpha:]]+$')) not null,
     personal_id varchar(255) unique CHECK (
 
         -- After six digits and slash cannot be 000, but can be 0000
@@ -58,16 +58,16 @@ CREATE TABLE person (
         AND ((regexp_like(personal_id,'^((((0[4-9])|([1-4][0-9])|(5[0-3]))([2378][0-9]{3})(/[0-9]{4}))|(([0-9]{2})([0156][0-9]{3})(/[0-9]{3,4})))$')
         AND ((regexp_like(personal_id, '^[0-9]{6}/[0-9]{4}$') AND MOD(replace(personal_id,'/',''), 11) IN 0)
             OR ((regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}0$') AND MOD(SUBSTR(replace(personal_id, '/', ''), 1, 9), 11) IN 10)
-                OR(regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}$')))))))))),
+                OR(regexp_like(personal_id, '^[0-9]{6}/[0-9]{3}$')))))))))) not null,
     gender char CHECK (gender in ('M', 'F')),
     date_of_birth date,
-    place_id int null, --FK
-    contact_id int null --FK
+    place_id int, --FK
+    contact_id int --FK
 );
 
 CREATE TABLE client(
     client_id int primary key,
-    person_id int null --FK
+    person_id int --FK
 );
 
 CREATE TABLE employee(
@@ -77,28 +77,28 @@ CREATE TABLE employee(
     holidays_left int,
     started_at date,
     ended_at date,
-    branch_id int null, --FK
-    person_id int null --FK
+    branch_id int, --FK
+    person_id int --FK
 );
 
 CREATE TABLE account(
     account_id int primary key,
-    account_number varchar(22) CHECK (regexp_like(account_number,'^[0-9]{6}/[0-9]{10}/[0-9]{4}$')),
+    account_number varchar(22) CHECK (regexp_like(account_number,'^([0-9]{6}/)?[0-9]{10}/[0-9]{4}$')) not null,
     IBAN varchar(30) unique CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
     balance decimal(10, 2),
-    is_active int CHECK (is_active IN (0, 1)),
-    branch_id int null, --FK
-    employee_id int null, --FK
-    client_user_id int null, --FK
-    account_type_id int null, --FK
-    currency_id int null --FK
+    is_active int CHECK (is_active IN (0, 1)) not null,
+    branch_id int, --FK
+    employee_id int, --FK
+    client_user_id int, --FK
+    account_type_id int, --FK
+    currency_id int --FK
 );
 
 CREATE TABLE client_user(
     user_id int primary key,
-    username varchar(7) unique CHECK (regexp_like(username, '^[0-9]{7}$')),
+    username varchar(7) unique CHECK (regexp_like(username, '^[0-9]{7}$')) not null,
     password varchar(128),
-    client_id int null --FK
+    client_id int --FK
 );
 
 CREATE TABLE account_type(
@@ -111,30 +111,30 @@ CREATE TABLE bank(
     bank_id int primary key,
     name varchar(255) unique,
     bank_code varchar(4) unique CHECK (regexp_like(bank_code, '^[0-9]{4}$')),
-    ICO varchar(8) unique CHECK (regexp_like(ICO, '^[0-9]{8}$')),
+    ICO varchar(8) unique CHECK (regexp_like(ICO, '^[0-9]{8}$')) not null,
     swift_code varchar(20) unique CHECK (regexp_like(swift_code, '^([A-Z]{4}(CZ|SK)([0-9]|[A-Z]){2})$'))
 );
 
 CREATE TABLE branch(
     branch_id int primary key,
-    bank_id int null, --FK
-    place_id int null, --FK
-    contact_id int null --FK
+    bank_id int DEFAULT 1, --FK
+    place_id int, --FK
+    contact_id int --FK
 );
 
 CREATE TABLE payment_card(
     payment_card_id int primary key,
-    card_number varchar(16) unique CHECK(regexp_like(card_number, '^(4[0-9]{12}([0-9]{3})?|5[1-5][0-9]{14})$')),
-    expiration_date varchar(5) unique CHECK (regexp_like(expiration_date, '^((1[0-2])|(0[1-9]))/[0-9]{2}$')),
-    CVV varchar(3) CHECK (regexp_like(CVV, '^[0-9]{3,4}$')),
-    is_active int CHECK (is_active IN (0, 1)),
+    card_number varchar(16) unique CHECK(regexp_like(card_number, '^(4[0-9]{12}([0-9]{3})?|5[1-5][0-9]{14})$')) not null,
+    expiration_date varchar(5) unique CHECK (regexp_like(expiration_date, '^((1[0-2])|(0[1-9]))/[0-9]{2}$')) not null,
+    CVV varchar(3) CHECK (regexp_like(CVV, '^[0-9]{3,4}$')) not null,
+    is_active int CHECK (is_active IN (0, 1)) not null,
     withdrawal_limit decimal(10, 2),
     mo_to_limit decimal(10, 2),
     proximity_payment_limit decimal(10, 2),
     global_payment_limit decimal(10, 2),
-    account_id int null, --FK
-    card_type_id int null, --FK
-    client_user_id int null --FK
+    account_id int, --FK
+    card_type_id int, --FK
+    client_user_id int --FK
 );
 
 CREATE TABLE card_type(
@@ -147,35 +147,35 @@ CREATE TABLE card_type(
 
 CREATE TABLE operation(
     operation_id int primary key,
-    operation_type varchar(32) CHECK (operation_type IN ('withdrawal', 'deposit', 'payment')),
+    operation_type varchar(32) CHECK (operation_type IN ('withdrawal', 'deposit', 'payment')) not null,
     amount decimal(10, 2),
     create_date date,
     processed_date date,
     finished_date date,
     is_done int CHECK (is_done IN (0, 1)),
     IBAN varchar(30) CHECK (regexp_like(IBAN,'^(CZ|SK)[0-9]{22}$')),
-    account_id int null, --FK
-    currency_id int null --FK
+    account_id int, --FK
+    currency_id int --FK
 );
 
 CREATE TABLE currency(
     currency_id int primary key,
     name varchar(40),
-    exchange_rate decimal(10, 5)
+    exchange_rate decimal(10, 5) not null
 );
 
 CREATE TABLE place(
     place_id int primary key,
-    address varchar(255),
+    address varchar(255) not null,
     city varchar(255),
-    country varchar(255),
+    country varchar(255) not null,
     postal_code varchar(255) CHECK (regexp_like(postal_code, '^[0-9]{5}$'))
 );
 
 CREATE TABLE contact_info(
     contact_id int primary key,
-    phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^((\+)?[0-9]{3})?[0-9]{9}$')),
-    email varchar(255) unique CHECK (regexp_like(email,'^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$')) null
+    phone_number varchar(13) unique CHECK (regexp_like(phone_number, '^((\+)?[0-9]{3})?[0-9]{9}$')) not null,
+    email varchar(255) unique CHECK (regexp_like(email,'^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$'))
 );
 
 CREATE TABLE service(
@@ -255,22 +255,22 @@ INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Vrázova 973', 'Prague', 'Czech
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Krátka 6', 'Bratislava', 'Slovakia', '81103');
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Brezová 483', 'Košice', 'Slovakia', '04001');
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '77900');
-INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Joštova 137', 'Brno', 'Czechia', '00000');
-INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Nevädzová 6', 'Bratislava', 'Slovakia', '00000');
-INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Hlavná 8', 'Košice', 'Slovakia', '00000');
-INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Námestie slobody 24', 'Skalica', 'Slovakia', '00000');
-INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Polská 1', 'Olomouc', 'Czechia', '00000');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Joštova 137', 'Brno', 'Czechia', '60200');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Nevädzová 6', 'Bratislava', 'Slovakia', '82101');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Hlavná 8', 'Košice', 'Slovakia', '04001');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Námestie slobody 24', 'Skalica', 'Slovakia', '90901');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Kubíčkova 5', 'Brno', 'Czechia', '63500');
 
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420734916785', 'ondrej.novak@mail.com');
-INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420600435980', 'novak.andrej123@gmail.com');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '420600435980', 'novak.andrej123@gmail.com');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420550604800', 'suchaa@seznam.cz');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421723014059', '681455@fit.vutbr.cz');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421639822019', 'marian1@email.cz');
-INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '222010540', null);
-INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '421850638171', null);
-INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421220850438', null);
-INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421850111888', null);
-INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420585757003', null);
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '222010540', 'branch1@equa.bank.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '421850638171', 'branch2@equa.bank.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421220850438', 'branch3@equa.bank.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '421850111888', 'branch4@equa.bank.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420585757003', 'branch5@equa.bank.cz');
 
 -- INVALID FORMATS --
 --INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010724/000', 'M', null, 1);     -- /000
@@ -308,11 +308,11 @@ INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Fio banka, a.s.', '2010', '618583
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'Slovenská sporitelna, a.s.', '0900', '00151653', 'GIBASKBX');
 INSERT INTO bank VALUES (SEQ_BANK_ID.nextval, 'mBank S.A.', '6210', '27943445', 'BREXCZPP');
 
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 1, 6, 6);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 2, 7, 7);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 3, 8, 8);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 4, 9, 9);
-INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, 5, 10, 10);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, DEFAULT, 6, 6);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, DEFAULT, 7, 7);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, DEFAULT, 8, 8);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, DEFAULT, 9, 9);
+INSERT INTO branch VALUES (SEQ_BRANCH_ID.nextval, DEFAULT, 10, 10);
 
 INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4500, 0, '1.7.2005', '20.3.2009', 1, 1);
 INSERT INTO employee VALUES (SEQ_EMPLOYEE_ID.nextval, 'Director', 4800, 22, '21.3.2009', null, 1, 2);
@@ -333,7 +333,7 @@ INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1963482', 'abf67d1b
 INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1682334', 'd566c130da1011180b3584e22d60dd0cfae250fa1e030bfa68cce593a1efa9f1', 4);
 INSERT INTO client_user VALUES (SEQ_CLIENT_USER_ID.nextval, '1210801', '4a3ca91f11c4ade33cca71eabf4f179a9f74f05b09367612256aa9428bcf602e', 5);
 
-INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '000000/1030432706/6100', 'CZ7661000000001030432706', 531.20, 1, 1, 4, 1, 1, 2);
+INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '1030432706/6100', 'CZ7661000000001030432706', 531.20, 1, 1, 4, 1, 1, 2);
 INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '670100/2216739313/6210', 'CZ5262106701002216739313', 2999.00, 0, 5, 3, 2, 1, 2);
 INSERT INTO account VALUES (SEQ_ACCOUNT_ID.nextval, '000000/5134779323/0900', 'SK4709000000005134779323', 150020.90, 0, 4, 4, 1, 1, 1);
 

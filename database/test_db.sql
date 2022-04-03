@@ -2,14 +2,6 @@
 -- DROP all sequences from user_sequences
 -- Create all custom sequences from the array
 
-/*
-BEGIN
-    FOR s IN (SELECT TABLE_NAME FROM USER_TABLES) LOOP
-        EXECUTE IMMEDIATE ('DROP TABLE ' || s.TABLE_NAME || ' CASCADE CONSTRAINTS');
-    END LOOP;
-END;
-*/
-
 BEGIN
     DECLARE
         type array_t is varray(40) of varchar2(100);
@@ -260,6 +252,8 @@ INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Nevädzová 6', 'Bratislava', '
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Hlavná 8', 'Košice', 'Slovakia', '04001');
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Námestie slobody 24', 'Skalica', 'Slovakia', '90901');
 INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Kubíčkova 5', 'Brno', 'Czechia', '63500');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Plevova 9', 'Brno', 'Czechia', '61600');
+INSERT INTO place VALUES (SEQ_PLACE_ID.nextval, 'Vejrostova 4', 'Brno', 'Czechia', '63500');
 
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420734916785', 'ondrej.novak@mail.com');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '420600435980', 'novak.andrej123@gmail.com');
@@ -271,6 +265,8 @@ INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '421850638171', 'b
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421220850438', 'branch3@equa.bank.cz');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '421850111888', 'branch4@equa.bank.cz');
 INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+420585757003', 'branch5@equa.bank.cz');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '+421911369367', 'kristian.kicinka@gmail.com');
+INSERT INTO contact_info VALUES (SEQ_CONTACT_INFO_ID.nextval, '722034120', 'wasekva@gmail.com');
 
 -- INVALID FORMATS --
 --INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Ondřej', 'Novák', '010724/000', 'M', null, 1);     -- /000
@@ -285,6 +281,8 @@ INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Andrej', 'Novák', '510527/37
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Anna', 'Suchá', '045111/6996', 'F', '11.1.2004', 2, 3);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Mária', 'Horváthová', '315216/557', 'F', '16.2.1931', 3, 4);
 INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Marián', 'Mráz', '861219/9761', 'M', '19.12.1986', 4, 5);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Kristián', 'Kičinka', '001120/7262', 'M', '20.11.2000', 11, 11);
+INSERT INTO person VALUES (SEQ_PERSON_ID.nextval, 'Václav', 'Valenta', '010724/4071', 'M', '24.07.2001', 12, 12);
 
 INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'EUR', 1);
 INSERT INTO currency VALUES(SEQ_CURRENCY_ID.nextval, 'CZK', 0.040);

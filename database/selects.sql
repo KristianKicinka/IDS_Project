@@ -1,11 +1,11 @@
 
 -- ###### dva dotazy využívající spojení dvou tabulek ######
 -- Zobrazenie podrobností o účte (účet/typ)
-SeLECT ACCOUNT_ID, ACCOUNT_NUMBER, IBAN, BALANCE, IS_ACTIVE, TYPE_NAME, MANAGEMENT_FEE
+SeLECT ACCOUNT_NUMBER, IBAN, BALANCE, IS_ACTIVE, TYPE_NAME, MANAGEMENT_FEE
     FROM account NATURAL JOIN account_type;
 
 -- Zobrazenie podrobností o platobnej karte (karta/typ karty)s
-SELECT PAYMENT_CARD_ID, CARD_NUMBER, EXPIRATION_DATE, CARD_TYPE.NAME as CARD_TYPE, COMPANY
+SELECT CARD_NUMBER, EXPIRATION_DATE, CARD_TYPE.NAME as CARD_TYPE, COMPANY
     FROM payment_card NATURAL JOIN card_type;
 
 -- ###### jeden využívající spojení tří tabulek ########
@@ -25,4 +25,10 @@ SELECT COMPANY, COUNT(*) as CARDS_COUNT FROM CARD_TYPE GROUP BY COMPANY;
 SELECT NAME, DESCRIPTION, FEE
     FROM SERVICE WHERE EXISTS(SELECT ACCOUNT_ID FROM ACCOUNT WHERE IS_ACTIVE = 1);
 
--- jeden dotaz s predikátem IN s vnořeným selectem (nikoliv IN s množinou konstantních dat)
+-- ###### jeden dotaz s predikátem IN s vnořeným selectem (nikoliv IN s množinou konstantních dat) #######
+-- Zobrazenie základných informácií o zamestnancoch banky, ktorá má id nižšie ako 2
+SELECT FIRST_NAME,LAST_NAME,PERSONAL_ID, WORK_POSITION, SALARY FROM PERSON
+    JOIN EMPLOYEE ON PERSON.PERSON_ID = EMPLOYEE.PERSON_ID
+    JOIN BRANCH ON EMPLOYEE.BRANCH_ID = BRANCH.BRANCH_ID
+    JOIN BANK ON BANK.BANK_ID = BRANCH.BANK_ID
+    WHERE BANK.NAME IN (SELECT NAME FROM BANK WHERE BANK.BANK_ID < 2);

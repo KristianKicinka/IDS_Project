@@ -365,17 +365,20 @@ INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 50, 1, 1);
 INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 50, 2, 5);
 
 -- ###### dva dotazy využívající spojení dvou tabulek ######
--- Zobrazenie podrobností o účte (účet/typ)
+-- Zobrazenie základných informacií o účte
+-- Číslo účtu, IBAN, zostatok, stav účtu (aktivný / neaktivný), typ účtu, poplatok za vedenie
 SELECT ACCOUNT_NUMBER, IBAN, BALANCE, IS_ACTIVE, TYPE_NAME, MANAGEMENT_FEE
     FROM account NATURAL JOIN account_type;
 
--- Zobrazenie podrobností o platobnej karte (karta/typ karty)s
+-- Zobrazenie podrobností o platobnej karte (karta/typ karty)
+-- Číslo karty, datum expiracie, typ karty, spoločnosť
 SELECT CARD_NUMBER, EXPIRATION_DATE, CARD_TYPE.NAME as CARD_TYPE, COMPANY
     FROM payment_card NATURAL JOIN card_type;
 
 -- ###### jeden využívající spojení tří tabulek ########
 -- Zobrazenie informácii o človeku.
-SELECT FIRST_NAME, LAST_NAME, PERSON_ID, GENDER, DATE_OF_BIRTH, PHONE_NUMBER, EMAIL, ADDRESS, CITY, COUNTRY, POSTAL_CODE
+-- Meno, priezvisko, rodné číslo, pohlavie, dátum narodenia, telefonné číslo, email, adresa, mesto, krajina, psč
+SELECT FIRST_NAME, LAST_NAME, PERSONAL_ID, GENDER, DATE_OF_BIRTH, PHONE_NUMBER, EMAIL, ADDRESS, CITY, COUNTRY, POSTAL_CODE
     FROM person NATURAL JOIN place NATURAL JOIN contact_info;
 
 -- ###### dva dotazy s klauzulí GROUP BY a agregační funkcí #######
@@ -387,6 +390,7 @@ SELECT COMPANY, COUNT(*) as CARDS_COUNT FROM CARD_TYPE GROUP BY COMPANY;
 
 -- ###### jeden dotaz obsahující predikát EXISTS ######
 -- Zobrazenie služieb aktívnych účtov
+-- Názov, popis, poplatok za službu
 SELECT NAME, DESCRIPTION, FEE
     FROM SERVICE WHERE EXISTS(
         SELECT ACCOUNT_NUMBER FROM ACCOUNT
@@ -394,7 +398,8 @@ SELECT NAME, DESCRIPTION, FEE
         WHERE SERVICE.SERVICE_ID = AccService.SERVICE_ID AND IS_ACTIVE = 1);
 
 -- ###### jeden dotaz s predikátem IN s vnořeným selectem (nikoliv IN s množinou konstantních dat) #######
--- Zobrazenie základných informácií o zamestnancoch banky, ktorá má id nižšie ako 2
+-- Zobrazenie základných informácií o zamestnancoch banky, ktorá má vyššie kód banky ako 6000
+-- Meno, priezvisko, rodné číslo, pozicia, plat
 SELECT FIRST_NAME, LAST_NAME, PERSONAL_ID, WORK_POSITION, SALARY FROM PERSON
     JOIN EMPLOYEE ON PERSON.PERSON_ID = EMPLOYEE.PERSON_ID
     JOIN BRANCH ON EMPLOYEE.BRANCH_ID = BRANCH.BRANCH_ID

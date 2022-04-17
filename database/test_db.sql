@@ -27,6 +27,7 @@ BEGIN
         END LOOP;
     END;
 END;
+/
 
 CREATE TABLE person (
     person_id int primary key,
@@ -354,6 +355,7 @@ INSERT INTO service VALUES (SEQ_SERVICE_ID.nextval, 'Overdraft premium', 'Market
 INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 4, '1.1.2022');
 INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 2, '30.3.2022');
 INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 1, '28.9.2019');
+INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 2, '28.10.2019');
 INSERT INTO account_service VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 3, '1.1.2020');
 
 INSERT INTO rules VALUES (SEQ_RULES_ID.nextval, 1000, 3, 1);

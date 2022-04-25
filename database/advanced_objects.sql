@@ -44,15 +44,16 @@ SELECT * FROM CARD_TYPE;
 CREATE OR REPLACE PROCEDURE INCREASE_SALARY (position VARCHAR, percentage NUMBER)
 IS
     old_salary EMPLOYEE.SALARY%type;
+    employeeID EMPLOYEE.EMPLOYEE_ID%type;
     new_salary NUMBER;
-    CURSOR select_salary IS SELECT SALARY FROM EMPLOYEE WHERE WORK_POSITION = position;
+    CURSOR select_salary IS SELECT SALARY,EMPLOYEE_ID FROM EMPLOYEE WHERE EMPLOYEE.WORK_POSITION = position;
 BEGIN
     OPEN select_salary;
     LOOP
-        FETCH select_salary INTO old_salary;
+        FETCH select_salary INTO old_salary,employeeID;
         EXIT WHEN select_salary%NOTFOUND;
         new_salary := old_salary + (old_salary * (percentage/100));
-        UPDATE EMPLOYEE SET SALARY = new_salary WHERE WORK_POSITION = position;
+        UPDATE EMPLOYEE SET SALARY = new_salary WHERE EMPLOYEE.EMPLOYEE_ID = employeeID;
     end loop;
     CLOSE select_salary;
 end;

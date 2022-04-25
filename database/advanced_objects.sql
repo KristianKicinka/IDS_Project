@@ -1,19 +1,28 @@
 -- vytvoření alespoň dvou netriviálních databázových triggerů vč. jejich předvedení
 
 CREATE OR REPLACE TRIGGER CARD_ACTIVITY
-    BEFORE INSERT OR UPDATE OF expiration_date
+    BEFORE UPDATE OR INSERT
     ON PAYMENT_CARD
     FOR EACH ROW
 BEGIN
-    UPDATE PAYMENT_CARD
-    SET IS_ACTIVE = 0
-    WHERE ((SUBSTR(EXPIRATION_DATE, 3, 2) >= SUBSTR(to_char(sysdate, 'YEAR'), 3, 2)) AND
-           (SUBSTR(EXPIRATION_DATE, 1, 2) >= to_char(sysdate, 'MONTH')));
-
+    IF (((SUBSTR(:new.EXPIRATION_DATE, 4, 2) = SUBSTR(TO_CHAR(sysdate), 7, 2))
+        AND (SUBSTR(:new.EXPIRATION_DATE, 1, 2) < SUBSTR(TO_CHAR(sysdate), 4, 2)))
+        OR (SUBSTR(:new.EXPIRATION_DATE, 4, 2) < SUBSTR(TO_CHAR(sysdate), 7, 2)))
+    THEN
+        :new.IS_ACTIVE := 0;
+    ELSE
+        :new.IS_ACTIVE := 1;
+    END IF;
 end;
 /
 
-SELECT * FROM PAYMENT_CARD;
+UPDATE PAYMENT_CARD
+SET EXPIRATION_DATE = '03/22'
+WHERE PAYMENT_CARD_ID = 3;
+
+
+SELECT *
+FROM PAYMENT_CARD;
 
 -- vytvoření alespoň dvou netriviálních uložených procedur vč. jejich předvedení,
 -- ve kterých se musí (dohromady) vyskytovat alespoň jednou kurzor,
@@ -23,9 +32,11 @@ SELECT * FROM PAYMENT_CARD;
 CREATE OR REPLACE PROCEDURE CHANGE_DEBITS_LIMITS_BY_COMPANY(cardCompany varchar, debitLimit number)
     IS
     card_id CARD_TYPE.CARD_TYPE_ID%type;
-    CURSOR select_cards IS SELECT CARD_TYPE_ID
-                           FROM CARD_TYPE
-                           WHERE CARD_TYPE.COMPANY = cardCompany;
+    CURSOR
+        select_cards IS
+        SELECT CARD_TYPE_ID
+        FROM CARD_TYPE
+        WHERE CARD_TYPE.COMPANY = cardCompany;
     limit   number;
 BEGIN
     limit := debitLimit;
@@ -62,9 +73,10 @@ CREATE OR REPLACE PROCEDURE INCREASE_SALARY(position VARCHAR, percentage NUMBER)
     old_salary EMPLOYEE.SALARY%type;
     employeeID EMPLOYEE.EMPLOYEE_ID%type;
     new_salary NUMBER;
-    CURSOR select_salary IS SELECT SALARY, EMPLOYEE_ID
-                            FROM EMPLOYEE
-                            WHERE EMPLOYEE.WORK_POSITION = position;
+    CURSOR select_salary IS
+        SELECT SALARY, EMPLOYEE_ID
+        FROM EMPLOYEE
+        WHERE EMPLOYEE.WORK_POSITION = position;
 BEGIN
     OPEN select_salary;
     LOOP

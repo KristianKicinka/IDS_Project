@@ -10,15 +10,20 @@
 CREATE OR REPLACE PROCEDURE CHANGE_DEBITS_LIMITS_BY_COMPANY
     (cardCompany varchar, debitLimit number)
 IS
-
     card_id CARD_TYPE.CARD_TYPE_ID%type;
     CURSOR select_cards IS SELECT CARD_TYPE_ID FROM CARD_TYPE WHERE CARD_TYPE.COMPANY = cardCompany;
+    limit number;
 BEGIN
+    limit:=debitLimit;
+    IF (limit IS NULL) THEN
+        limit:=0;
+    ELSE limit:=debitLimit;
+    END IF;
    OPEN select_cards;
    LOOP
         FETCH select_cards INTO card_id;
         EXIT WHEN select_cards%NOTFOUND;
-        UPDATE CARD_TYPE SET DEBIT_LIMIT = debitLimit WHERE CARD_TYPE_ID = card_id;
+        UPDATE CARD_TYPE SET DEBIT_LIMIT = limit WHERE CARD_TYPE_ID = card_id;
         COMMIT;
     end loop;
    CLOSE select_cards;
@@ -28,9 +33,36 @@ WHEN OTHERS THEN
    raise_application_error(-20001,'An error was encountered - '||SQLCODE||' -ERROR- '||SQLERRM);
 END;
 /
-EXECUTE CHANGE_DEBITS_LIMITS_BY_COMPANY('VISA',123000);
+BEGIN
+    CHANGE_DEBITS_LIMITS_BY_COMPANY('VISA',NULL);
+END;
+/
 
 SELECT * FROM CARD_TYPE;
+
+
+CREATE OR REPLACE PROCEDURE INCREASE_SALARY (position VARCHAR, percentage NUMBER)
+IS
+    old_salary EMPLOYEE.SALARY%type;
+    new_salary NUMBER;
+    CURSOR select_salary IS SELECT SALARY FROM EMPLOYEE WHERE WORK_POSITION = position;
+BEGIN
+    OPEN select_salary;
+    LOOP
+        FETCH select_salary INTO old_salary;
+        EXIT WHEN select_salary%NOTFOUND;
+        new_salary := old_salary + (old_salary * (percentage/100));
+        UPDATE EMPLOYEE SET SALARY = new_salary WHERE WORK_POSITION = position;
+    end loop;
+    CLOSE select_salary;
+end;
+/
+BEGIN
+    INCREASE_SALARY('Director', -50);
+end;
+/
+
+SELECT WORK_POSITION,SALARY FROM EMPLOYEE;
 
 -- explicitní vytvoření alespoň jednoho indexu tak, aby pomohl optimalizovat zpracování dotazů,
 -- přičemž musí být uveden také příslušný dotaz, na který má index vliv,

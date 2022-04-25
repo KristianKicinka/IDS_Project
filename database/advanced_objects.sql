@@ -1,5 +1,19 @@
 -- vytvoření alespoň dvou netriviálních databázových triggerů vč. jejich předvedení
 
+CREATE OR REPLACE TRIGGER CARD_ACTIVITY
+    BEFORE INSERT OR UPDATE OF expiration_date
+    ON PAYMENT_CARD
+    FOR EACH ROW
+BEGIN
+    UPDATE PAYMENT_CARD
+    SET IS_ACTIVE = 0
+    WHERE ((SUBSTR(EXPIRATION_DATE, 3, 2) >= SUBSTR(to_char(sysdate, 'YEAR'), 3, 2)) AND
+           (SUBSTR(EXPIRATION_DATE, 1, 2) >= to_char(sysdate, 'MONTH')));
+
+end;
+/
+
+SELECT * FROM PAYMENT_CARD;
 
 -- vytvoření alespoň dvou netriviálních uložených procedur vč. jejich předvedení,
 -- ve kterých se musí (dohromady) vyskytovat alespoň jednou kurzor,

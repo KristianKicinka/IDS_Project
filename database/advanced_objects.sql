@@ -112,6 +112,27 @@ FROM EMPLOYEE;
 
 -- definici přístupových práv k databázovým objektům pro druhého člena týmu,
 
+CREATE OR REPLACE PROCEDURE ADD_PRIVILEGES (user VARCHAR)
+    IS
+    tableName USER_TABLES.table_name%type;
+    CURSOR select_all_tables IS SELECT table_name FROM USER_TABLES;
+BEGIN
+    OPEN select_all_tables;
+    LOOP
+        FETCH select_all_tables INTO tableName;
+        EXIT WHEN select_all_tables%NOTFOUND;
+        EXECUTE IMMEDIATE 'GRANT ALL ON ' || tableName || ' TO ' || user;
+    end loop;
+    CLOSE select_all_tables;
+end;
+/
+
+BEGIN
+    ADD_PRIVILEGES('XVALEN29');
+end;
+/
+
+SELECT * FROM table_privileges WHERE grantee = 'XVALEN29' ORDER BY owner, table_name;
 
 -- vytvořen alespoň jeden materializovaný pohled patřící druhému členu týmu a používající tabulky definované prvním
 -- členem týmu (nutno mít již definována přístupová práva), vč. SQL příkazů/dotazů ukazujících, jak

@@ -14,12 +14,15 @@ BEGIN
     BEGIN
         FOR s IN (SELECT sequence_name FROM user_sequences)
             LOOP
+                -- DROP all sequnces
                 EXECUTE IMMEDIATE ('DROP SEQUENCE ' || s.sequence_name);
             END LOOP;
         FOR i IN 1..table_array.count
             LOOP
+                -- CREATE all sequences
                 EXECUTE IMMEDIATE ('CREATE SEQUENCE seq_' || table_array(i) || '_id');
                 BEGIN
+                    -- DROP all tables if possible
                     EXECUTE IMMEDIATE ('DROP TABLE ' || table_array(i) || ' CASCADE CONSTRAINTS');
                 EXCEPTION
                     WHEN OTHERS THEN
@@ -31,6 +34,7 @@ BEGIN
         FOR i IN 1..view_array.count
             LOOP
                 BEGIN
+                    -- DROP all materialized views
                     EXECUTE IMMEDIATE ('DROP MATERIALIZED VIEW ' || view_array(i));
                 EXCEPTION
                     WHEN OTHERS THEN
@@ -537,11 +541,15 @@ VALUES (SEQ_SERVICE_ID.nextval, 'Overdraft premium', 'Market account premium ove
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 4, '1.1.2022');
 INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 2, '1.1.2022');
+INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 2, '30.3.2022');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 1, '28.9.2019');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 2, '28.10.2019');
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 3, '28.10.2020');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 3, '1.1.2020');
 

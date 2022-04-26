@@ -1,5 +1,9 @@
--- vytvoření alespoň dvou netriviálních databázových triggerů vč. jejich předvedení
-
+-----------------------
+--- CREATE TRIGGERS ---
+-----------------------
+-- Card activity trigger
+-- When changing or inserting new payment card - expiration date is checked
+-- If it's overdue -> card_activity is set to 0, otherwise 1
 CREATE OR REPLACE TRIGGER CARD_ACTIVITY
     BEFORE UPDATE OR INSERT
     ON PAYMENT_CARD
@@ -16,13 +20,40 @@ BEGIN
 end;
 /
 
+-- Activity card
 UPDATE PAYMENT_CARD
 SET EXPIRATION_DATE = '03/22'
 WHERE PAYMENT_CARD_ID = 3;
 
-
 SELECT *
 FROM PAYMENT_CARD;
+
+
+-- Transaction conversion trigger
+-- When inserting new operation, if the currency is any other the EUR,
+-- the amount of money is automatically converted to default currency using conversion rates in currency table
+-- and currency is set to 1 (EUR)
+CREATE OR REPLACE TRIGGER TRANSACTION_CONVERSION
+    BEFORE INSERT
+    ON OPERATION
+    FOR EACH ROW
+DECLARE
+    ex_rate number;
+BEGIN
+    SELECT EXCHANGE_RATE INTO ex_rate FROM CURRENCY WHERE CURRENCY.CURRENCY_ID = :new.CURRENCY_ID;
+    IF (:new.CURRENCY_ID <> 1) THEN
+        :new.AMOUNT := :new.AMOUNT * ex_rate;
+        :new.CURRENCY_ID := 1;
+    END IF;
+END;
+/
+
+INSERT INTO operation
+VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0,
+        'CZ5262106701002216739313', 2, 2);
+
+SELECT *
+FROM OPERATION;
 
 -- vytvoření alespoň dvou netriviálních uložených procedur vč. jejich předvedení,
 -- ve kterých se musí (dohromady) vyskytovat alespoň jednou kurzor,
@@ -112,10 +143,11 @@ FROM EMPLOYEE;
 
 -- definici přístupových práv k databázovým objektům pro druhého člena týmu,
 
-CREATE OR REPLACE PROCEDURE ADD_PRIVILEGES (user VARCHAR)
+CREATE OR REPLACE PROCEDURE ADD_PRIVILEGES(user VARCHAR)
     IS
     tableName USER_TABLES.table_name%type;
-    CURSOR select_all_tables IS SELECT table_name FROM USER_TABLES;
+    CURSOR select_all_tables IS SELECT table_name
+                                FROM USER_TABLES;
 BEGIN
     OPEN select_all_tables;
     LOOP
@@ -132,7 +164,10 @@ BEGIN
 end;
 /
 
-SELECT * FROM table_privileges WHERE grantee = 'XVALEN29' ORDER BY owner, table_name;
+SELECT *
+FROM table_privileges
+WHERE grantee = 'XVALEN29'
+ORDER BY owner, table_name;
 
 -- vytvořen alespoň jeden materializovaný pohled patřící druhému členu týmu a používající tabulky definované prvním
 -- členem týmu (nutno mít již definována přístupová práva), vč. SQL příkazů/dotazů ukazujících, jak

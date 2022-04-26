@@ -30,7 +30,9 @@ BEGIN
     END;
 END;
 /
-
+---------------------
+--- CREATE TABLES ---
+---------------------
 CREATE TABLE person
 (
     person_id     int primary key,
@@ -201,7 +203,9 @@ CREATE TABLE service
 );
 
 
--- Create relationship
+----------------------------
+--- CREATE RELATIONSHIPS ---
+----------------------------
 ALTER TABLE branch
     ADD(
         CONSTRAINT fk_place_branch FOREIGN KEY (place_id) REFERENCES place (place_id) ON DELETE CASCADE,
@@ -253,7 +257,9 @@ ALTER TABLE operation
         CONSTRAINT fk_currency_operation FOREIGN KEY (currency_id) REFERENCES currency (currency_id) ON DELETE CASCADE
         );
 
--- Helping tables
+-------------------------------
+--- CREATE AUXILIARY TABLES ---
+-------------------------------
 CREATE TABLE account_service
 (
     id              int primary key,
@@ -274,7 +280,50 @@ CREATE TABLE rules
     CONSTRAINT fk_clientUser_rules FOREIGN KEY (user_id) REFERENCES client_user (user_id)
 );
 
--- Insert data
+-----------------------
+--- CREATE TRIGGERS ---
+-----------------------
+-- Card activity trigger
+-- When changing or inserting new payment card - expiration date is checked
+-- If it's overdue -> card_activity is set to 0, otherwise 1
+CREATE OR REPLACE TRIGGER CARD_ACTIVITY
+    BEFORE UPDATE OR INSERT
+    ON PAYMENT_CARD
+    FOR EACH ROW
+BEGIN
+    IF (((SUBSTR(:new.EXPIRATION_DATE, 4, 2) = SUBSTR(TO_CHAR(sysdate), 7, 2))
+        AND (SUBSTR(:new.EXPIRATION_DATE, 1, 2) < SUBSTR(TO_CHAR(sysdate), 4, 2)))
+        OR (SUBSTR(:new.EXPIRATION_DATE, 4, 2) < SUBSTR(TO_CHAR(sysdate), 7, 2)))
+    THEN
+        :new.IS_ACTIVE := 0;
+    ELSE
+        :new.IS_ACTIVE := 1;
+    END IF;
+end;
+/
+
+-- Transaction conversion trigger
+-- When inserting new operation, if the currency is any other the EUR,
+-- the amount of money is automatically converted to default currency using conversion rates in currency table
+-- and currency is set to 1 (EUR)
+CREATE OR REPLACE TRIGGER TRANSACTION_CONVERSION
+    BEFORE INSERT
+    ON OPERATION
+    FOR EACH ROW
+DECLARE
+    ex_rate number;
+BEGIN
+    SELECT EXCHANGE_RATE INTO ex_rate FROM CURRENCY WHERE CURRENCY.CURRENCY_ID = :new.CURRENCY_ID;
+    IF (:new.CURRENCY_ID <> 1) THEN
+        :new.AMOUNT := :new.AMOUNT * ex_rate;
+        :new.CURRENCY_ID := 1;
+    END IF;
+END;
+/
+
+-------------------
+--- INSERT DATA ---
+-------------------
 INSERT INTO place
 VALUES (SEQ_PLACE_ID.nextval, 'Božetěchova 2', 'Brno', 'Czechia', '61200');
 INSERT INTO place
@@ -449,7 +498,6 @@ VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5349804471300347', '04/28', '908', 1, 100.
 INSERT INTO payment_card
 VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '04/22', '679', 1, 2000.00, 0.00, 0.00, 2000.00, 2, 1, 2);
 
-
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', '5.6.2021', '5.6.2021', 1, null, 3, 3);
 INSERT INTO operation
@@ -496,6 +544,10 @@ INSERT INTO rules
 VALUES (SEQ_RULES_ID.nextval, 50, 1, 1);
 INSERT INTO rules
 VALUES (SEQ_RULES_ID.nextval, 50, 2, 5);
+
+---------------
+--- SELECTS ---
+---------------
 
 -- ###### dva dotazy využívající spojení dvou tabulek ######
 -- Zobrazenie základných informacií o účte

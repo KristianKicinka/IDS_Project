@@ -500,17 +500,14 @@ INSERT INTO payment_card
 VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '04/22', '679', 1, 2000.00, 0.00, 0.00, 2000.00, 2, 1, 2);
 
 INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', '5.6.2021', '5.6.2021', 1, null, 3, 3, 1);
-INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', '6.8.2021', '6.8.2021', 1, null, 2, 4, 5);
-INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', '10.12.2021', '10.12.2021', 1, null, 1, 2, 1);
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 300.00, '10.1.2022', '10.1.2022', '11.1.2022', 1,
-        'SK4709000000005134779323', 1, 1, 2);
+        'SK4709000000005134779323', 1, 1, 1);
 INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1350.00, '1.1.2022', '1.1.2022', '2.1.2022', 0, 'SK4709000000005134779323',
-        3, 1, 2);
+VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', '5.6.2021', '5.6.2021', 1, null, 3, 3, 2);
+INSERT INTO operation
+VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', '6.8.2021', '6.8.2021', 1, null, 2, 4, 5);
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1, '12.1.2022', '13.1.2022', '14.1.2022', 0,
         'CZ5262106701002216739313', 2, 5, 3);
@@ -542,7 +539,7 @@ VALUES (SEQ_RULES_ID.nextval, 200, 2, 5);
 INSERT INTO rules
 VALUES (SEQ_RULES_ID.nextval, 50000, 2, 3);
 INSERT INTO rules
-VALUES (SEQ_RULES_ID.nextval, 1500, 3, 1);
+VALUES (SEQ_RULES_ID.nextval, 1500, 3, 4);
 INSERT INTO rules
 VALUES (SEQ_RULES_ID.nextval, 1500, 3, 2);
 

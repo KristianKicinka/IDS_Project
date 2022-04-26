@@ -2,6 +2,7 @@
 -- DROP all materialized views that exists from declared array
 -- DROP all sequences from user_sequences
 -- Create all custom sequences from the array
+-- Source: Jeffrey Kemp at Stack Overflow [online] <https://stackoverflow.com/a/1801453> [answered: 26.11.2009] [viewed: 26.04.2022]
 BEGIN
     DECLARE
         type array_t is varray(40) of varchar2(100);
@@ -10,7 +11,8 @@ BEGIN
                 'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service', 'currency',
                 'rules', 'account_service'
             );
-        view_array  array_t := array_t('show_disponents_account', 'show_owners_accounts');
+        view_array  array_t := array_t('show_disponents_accounts', 'show_owners_accounts');
+        index_array array_t := array_t('service_index', 'account_index');
     BEGIN
         FOR s IN (SELECT sequence_name FROM user_sequences)
             LOOP
@@ -43,12 +45,27 @@ BEGIN
                         END IF;
                 END;
             END LOOP;
+        FOR i IN 1..view_array.count
+            LOOP
+                BEGIN
+                    -- DROP all indexes
+                    EXECUTE IMMEDIATE 'DROP INDEX ' || index_array(i);
+                EXCEPTION
+                    WHEN OTHERS THEN
+                        IF SQLCODE != -1418 THEN
+                            RAISE;
+                        END IF;
+                END;
+            END LOOP;
     END;
 END;
 /
+
 ---------------------
 --- CREATE TABLES ---
 ---------------------
+
+-- Create person table
 CREATE TABLE person
 (
     person_id     int primary key,
@@ -84,12 +101,14 @@ CREATE TABLE person
     contact_id    int  --FK
 );
 
+-- Create client table
 CREATE TABLE client
 (
     client_id int primary key,
     person_id int --FK
 );
 
+-- Create employee table
 CREATE TABLE employee
 (
     employee_id   int primary key,
@@ -102,6 +121,7 @@ CREATE TABLE employee
     person_id     int  --FK
 );
 
+-- Create account table
 CREATE TABLE account
 (
     account_id      int primary key,
@@ -116,6 +136,7 @@ CREATE TABLE account
     currency_id     int  --FK
 );
 
+-- Create client_user table
 CREATE TABLE client_user
 (
     user_id   int primary key,
@@ -124,6 +145,7 @@ CREATE TABLE client_user
     client_id int --FK
 );
 
+-- Create account_type table
 CREATE TABLE account_type
 (
     account_type_id int primary key,
@@ -131,6 +153,7 @@ CREATE TABLE account_type
     management_fee  decimal(10, 2)
 );
 
+-- Create bank table
 CREATE TABLE bank
 (
     bank_id    int primary key,
@@ -140,6 +163,7 @@ CREATE TABLE bank
     swift_code varchar(20) unique CHECK (regexp_like(swift_code, '^([A-Z]{4}(CZ|SK)([0-9]|[A-Z]){2})$'))
 );
 
+-- Create branch table
 CREATE TABLE branch
 (
     branch_id  int primary key,
@@ -148,6 +172,7 @@ CREATE TABLE branch
     contact_id int            --FK
 );
 
+-- Create payment_card table
 CREATE TABLE payment_card
 (
     payment_card_id         int primary key,
@@ -164,6 +189,7 @@ CREATE TABLE payment_card
     user_id                 int  --FK
 );
 
+-- Create card_type table
 CREATE TABLE card_type
 (
     card_type_id int primary key,
@@ -173,6 +199,7 @@ CREATE TABLE card_type
     description  varchar(255)
 );
 
+-- Create operation table
 CREATE TABLE operation
 (
     operation_id   int primary key,
@@ -188,6 +215,7 @@ CREATE TABLE operation
     user_id        int  --FK
 );
 
+-- Create currency table
 CREATE TABLE currency
 (
     currency_id   int primary key,
@@ -195,6 +223,7 @@ CREATE TABLE currency
     exchange_rate decimal(10, 5) not null
 );
 
+-- Create place table
 CREATE TABLE place
 (
     place_id    int primary key,
@@ -204,6 +233,7 @@ CREATE TABLE place
     postal_code varchar(255) CHECK (regexp_like(postal_code, '^[0-9]{5}$'))
 );
 
+-- Create contact_info table
 CREATE TABLE contact_info
 (
     contact_id   int primary key,
@@ -211,6 +241,7 @@ CREATE TABLE contact_info
     email        varchar(255) unique CHECK (regexp_like(email, '^\w{3,}(\.\w+)?@(\w{2,}\.)+\w{2,3}$'))
 );
 
+-- Create service table
 CREATE TABLE service
 (
     service_id  int primary key,
@@ -223,6 +254,7 @@ CREATE TABLE service
 ----------------------------
 --- CREATE RELATIONSHIPS ---
 ----------------------------
+
 ALTER TABLE branch
     ADD(
         CONSTRAINT fk_place_branch FOREIGN KEY (place_id) REFERENCES place (place_id) ON DELETE CASCADE,
@@ -278,6 +310,7 @@ ALTER TABLE operation
 -------------------------------
 --- CREATE AUXILIARY TABLES ---
 -------------------------------
+
 CREATE TABLE account_service
 (
     id              int primary key,
@@ -301,6 +334,7 @@ CREATE TABLE rules
 -----------------------
 --- CREATE TRIGGERS ---
 -----------------------
+
 -- Card activity trigger
 -- When changing or inserting new payment card - expiration date is checked
 -- If it's overdue -> card_activity is set to 0, otherwise 1
@@ -339,9 +373,71 @@ BEGIN
 END;
 /
 
--------------------
---- INSERT DATA ---
--------------------
+-------------------------
+--- CREATE PROCEDURES ---
+-------------------------
+
+-- Change debit limit by company procedure
+-- Changes debit limit on a card type by company
+-- If argument debit limit is NULL, procedure will change limits to 0
+CREATE OR REPLACE PROCEDURE CHANGE_DEBITS_LIMITS_BY_COMPANY(cardCompany varchar, debitLimit number)
+    IS
+    card_id CARD_TYPE.CARD_TYPE_ID%type;
+    CURSOR
+        select_cards IS
+        SELECT CARD_TYPE_ID
+        FROM CARD_TYPE
+        WHERE CARD_TYPE.COMPANY = cardCompany;
+    limit   number;
+BEGIN
+    limit := debitLimit;
+    IF (limit IS NULL) THEN
+        limit := 0;
+    ELSE
+        limit := debitLimit;
+    END IF;
+    OPEN select_cards;
+    LOOP
+        FETCH select_cards INTO card_id;
+        EXIT WHEN select_cards%NOTFOUND;
+        UPDATE CARD_TYPE SET DEBIT_LIMIT = limit WHERE CARD_TYPE_ID = card_id;
+        COMMIT;
+    end loop;
+    CLOSE select_cards;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        raise_application_error(-20001, 'An error was encountered - ' || SQLCODE || ' -ERROR- ' || SQLERRM);
+END;
+/
+
+-- Increase salary procedure
+-- Increases (or decreases) salary to given position by given percentage
+CREATE OR REPLACE PROCEDURE INCREASE_SALARY(position VARCHAR, percentage NUMBER)
+    IS
+    old_salary EMPLOYEE.SALARY%type;
+    employeeID EMPLOYEE.EMPLOYEE_ID%type;
+    new_salary NUMBER;
+    CURSOR select_salary IS
+        SELECT SALARY, EMPLOYEE_ID
+        FROM EMPLOYEE
+        WHERE EMPLOYEE.WORK_POSITION = position;
+BEGIN
+    OPEN select_salary;
+    LOOP
+        FETCH select_salary INTO old_salary,employeeID;
+        EXIT WHEN select_salary%NOTFOUND;
+        new_salary := old_salary + (old_salary * (percentage / 100));
+        UPDATE EMPLOYEE SET SALARY = new_salary WHERE EMPLOYEE.EMPLOYEE_ID = employeeID;
+    end loop;
+    CLOSE select_salary;
+end;
+/
+
+----------------------
+--- INSERTING DATA ---
+----------------------
+
 INSERT INTO place
 VALUES (SEQ_PLACE_ID.nextval, 'Božetěchova 2', 'Brno', 'Czechia', '61200');
 INSERT INTO place
@@ -519,15 +615,14 @@ VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '04/22', '679', 1, 2000
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', '10.12.2021', '10.12.2021', 1, null, 1, 2, 1);
 INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 300.00, '10.1.2022', '10.1.2022', '11.1.2022', 1,
-        'SK4709000000005134779323', 1, 1, 1);
+VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 300.00, '10.1.2022', '10.1.2022', '11.1.2022', 1, null, 1, 1, 1);
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', '5.6.2021', '5.6.2021', 1, null, 3, 3, 2);
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', '6.8.2021', '6.8.2021', 1, null, 2, 4, 5);
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1, '12.1.2022', '13.1.2022', '14.1.2022', 0,
-        'CZ5262106701002216739313', 2, 5, 3);
+        'SK4709000000005134779323', 2, 5, 3);
 
 INSERT INTO service
 VALUES (SEQ_SERVICE_ID.nextval, 'Loan', 'Standard loan', 10);
@@ -541,17 +636,19 @@ VALUES (SEQ_SERVICE_ID.nextval, 'Overdraft premium', 'Market account premium ove
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 4, '1.1.2022');
 INSERT INTO account_service
-VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 2, '1.1.2022');
-INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 2, '30.3.2022');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 1, '28.9.2019');
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 3, '1.1.2020');
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 1, '28.12.2019');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 2, '28.10.2019');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 3, '28.10.2020');
 INSERT INTO account_service
-VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 3, '1.1.2020');
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 2, '1.1.2022');
 
 INSERT INTO rules
 VALUES (SEQ_RULES_ID.nextval, 100, 1, 1);
@@ -567,23 +664,70 @@ VALUES (SEQ_RULES_ID.nextval, 1500, 3, 2);
 -----------------------------
 --- TRIGGER PRESENTATIONS ---
 -----------------------------
+
 -- Card activity trigger presentation
 -- Updating expiration date to be overdue
+
+-- Show all payment cards before activating the trigger
+SELECT CARD_NUMBER, EXPIRATION_DATE, IS_ACTIVE
+FROM PAYMENT_CARD;
+
 UPDATE PAYMENT_CARD
 SET EXPIRATION_DATE = '03/22'
 WHERE PAYMENT_CARD_ID = 3;
+
 -- Show all payment cards after activating the trigger
-SELECT *
+SELECT CARD_NUMBER, EXPIRATION_DATE, IS_ACTIVE
 FROM PAYMENT_CARD;
 
 -- Transaction conversion trigger
 -- Creating new operation in CZK
+
+-- Show all operation before activating the trigger
+SELECT operation_id, amount, currency_id
+FROM OPERATION;
+
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0,
         'CZ5262106701002216739313', 3, 2, 4);
+
 -- Show all operation after activating the trigger
-SELECT *
+SELECT operation_id, amount, currency_id
 FROM OPERATION;
+
+
+--------------------------------
+--- PROCEDURES PRESENTATIONS ---
+--------------------------------
+
+-- Set limits to all card types own by VISA to 50 EUR
+-- Show limits before procedure
+SELECT DESCRIPTION, COMPANY, DEBIT_LIMIT
+FROM CARD_TYPE;
+
+BEGIN
+    CHANGE_DEBITS_LIMITS_BY_COMPANY('VISA', 50);
+END;
+/
+
+-- Show limits after procedure
+SELECT DESCRIPTION, COMPANY, DEBIT_LIMIT
+FROM CARD_TYPE;
+
+-- Increase salary to Directors by 50%
+-- Show salaries before procedure
+SELECT WORK_POSITION, SALARY
+FROM EMPLOYEE;
+
+BEGIN
+    INCREASE_SALARY('Director', 50);
+end;
+/
+
+-- Show salaries after procedure
+SELECT WORK_POSITION, SALARY
+FROM EMPLOYEE;
+
 ---------------
 --- SELECTS ---
 ---------------
@@ -652,5 +796,109 @@ FROM PERSON
          JOIN BRANCH ON EMPLOYEE.BRANCH_ID = BRANCH.BRANCH_ID
          JOIN BANK ON BANK.BANK_ID = BRANCH.BANK_ID
 WHERE BANK.NAME IN (SELECT NAME FROM BANK WHERE BANK.BANK_CODE > 6000);
+
+-------------------------------
+--- EXPLAIN PLAIN AND INDEX ---
+-------------------------------
+
+-- Explain plan for viewing total counts of active services by name sorted by count descending
+EXPLAIN PLAN FOR
+SELECT SERVICE.NAME, SERVICE.FEE, COUNT(A2.ACCOUNT_ID) AS ACCOUNTS_COUNT
+FROM SERVICE
+         JOIN ACCOUNT_SERVICE "AS" on SERVICE.SERVICE_ID = "AS".SERVICE_ID
+         JOIN ACCOUNT A2 on "AS".ACCOUNT_ID = A2.ACCOUNT_ID
+GROUP BY SERVICE.NAME, SERVICE.FEE
+ORDER BY ACCOUNTS_COUNT DESC;
+
+-- Explain plan before indexes
+SELECT *
+FROM TABLE (DBMS_XPLAN.DISPLAY);
+
+CREATE INDEX "service_index" ON "ACCOUNT_SERVICE" ("SERVICE_ID");
+CREATE INDEX "account_index" ON "ACCOUNT_SERVICE" ("ACCOUNT_ID");
+
+-- Explain plan for viewing total counts of active services by name sorted by count descending
+EXPLAIN PLAN FOR
+SELECT SERVICE.NAME, SERVICE.FEE, COUNT(A2.ACCOUNT_ID) AS ACCOUNTS_COUNT
+FROM SERVICE
+         JOIN ACCOUNT_SERVICE "AS" on SERVICE.SERVICE_ID = "AS".SERVICE_ID
+         JOIN ACCOUNT A2 on "AS".ACCOUNT_ID = A2.ACCOUNT_ID
+GROUP BY SERVICE.NAME, SERVICE.FEE
+ORDER BY ACCOUNTS_COUNT DESC;
+
+-- Explain plan after indexes
+SELECT *
+FROM TABLE (DBMS_XPLAN.DISPLAY);
+
+--------------------------------
+--- CREATE MATERIALIZED VIEW ---
+--------------------------------
+
+CREATE MATERIALIZED VIEW show_owners_accounts
+AS
+SELECT USER_ID, PERSON_ID, FIRST_NAME, LAST_NAME, ACCOUNT.ACCOUNT_NUMBER, ACCOUNT.BALANCE
+FROM ACCOUNT
+         NATURAL JOIN CLIENT_USER
+         NATURAL JOIN CLIENT
+         NATURAL JOIN PERSON;
+
+CREATE MATERIALIZED VIEW show_disponents_accounts
+AS
+SELECT DISTINCT CLIENT_USER.USER_ID,
+                PERSON_ID,
+                FIRST_NAME,
+                LAST_NAME,
+                ACCOUNT.ACCOUNT_NUMBER,
+                ACCOUNT.BALANCE
+FROM ACCOUNT
+         JOIN RULES ON ACCOUNT.ACCOUNT_ID = RULES.ACCOUNT_ID
+         JOIN CLIENT_USER ON RULES.USER_ID = CLIENT_USER.USER_ID
+         JOIN CLIENT ON CLIENT_USER.CLIENT_ID = CLIENT.CLIENT_ID
+         NATURAL JOIN PERSON;
+
+GRANT ALL ON show_owners_accounts TO XVALEN29;
+GRANT ALL ON show_disponents_accounts TO XVALEN29;
+
+-- Owners and their accounts
+SELECT *
+FROM show_owners_accounts;
+
+-- Disponents and their accounts
+SELECT *
+FROM show_disponents_accounts;
+
+
+----------------------
+--- ADD PRIVILEGES ---
+----------------------
+
+-- Creates privileges procedure
+CREATE OR REPLACE PROCEDURE ADD_PRIVILEGES(user VARCHAR)
+    IS
+    tableName USER_TABLES.table_name%type;
+    CURSOR select_all_tables IS SELECT table_name
+                                FROM USER_TABLES;
+BEGIN
+    OPEN select_all_tables;
+    LOOP
+        FETCH select_all_tables INTO tableName;
+        EXIT WHEN select_all_tables%NOTFOUND;
+        EXECUTE IMMEDIATE 'GRANT ALL ON ' || tableName || ' TO ' || user;
+    end loop;
+    CLOSE select_all_tables;
+end;
+/
+
+-- Adds privileges
+BEGIN
+    ADD_PRIVILEGES('XVALEN29');
+end;
+/
+
+-- Show privileges for xvalen29
+SELECT *
+FROM table_privileges
+WHERE grantee = 'XVALEN29'
+ORDER BY owner, table_name;
 
 COMMIT;

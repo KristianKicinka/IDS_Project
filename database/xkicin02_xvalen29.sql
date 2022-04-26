@@ -93,7 +93,7 @@ CREATE TABLE account
     is_active       int CHECK (is_active IN (0, 1))                                                     not null,
     branch_id       int, --FK
     employee_id     int, --FK
-    client_user_id  int, --FK
+    user_id         int, --FK
     account_type_id int, --FK
     currency_id     int  --FK
 );
@@ -143,7 +143,7 @@ CREATE TABLE payment_card
     global_payment_limit    decimal(10, 2),
     account_id              int, --FK
     card_type_id            int, --FK
-    client_user_id          int  --FK
+    user_id          int  --FK
 );
 
 CREATE TABLE card_type
@@ -230,7 +230,7 @@ ALTER TABLE account
     ADD (
         CONSTRAINT fk_branch_account FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE CASCADE,
         CONSTRAINT fk_employee_account FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE,
-        CONSTRAINT fk_clientUser_account FOREIGN KEY (client_user_id) REFERENCES client_user (user_id) ON DELETE CASCADE,
+        CONSTRAINT fk_clientUser_account FOREIGN KEY (user_id) REFERENCES client_user (user_id) ON DELETE CASCADE,
         CONSTRAINT fk_accType_account FOREIGN KEY (account_type_id) REFERENCES account_type (account_type_id) ON DELETE CASCADE,
         CONSTRAINT fk_currency_account FOREIGN KEY (currency_id) REFERENCES currency (currency_id) ON DELETE CASCADE
         );
@@ -269,9 +269,9 @@ CREATE TABLE rules
     id             int primary key,
     daily_limit    int not null,
     account_id     int,
-    client_user_id int,
+    user_id int,
     CONSTRAINT fk_account_rules FOREIGN KEY (account_id) REFERENCES account (account_id),
-    CONSTRAINT fk_clientUser_rules FOREIGN KEY (client_user_id) REFERENCES client_user (user_id)
+    CONSTRAINT fk_clientUser_rules FOREIGN KEY (user_id) REFERENCES client_user (user_id)
 );
 
 -- Insert data
@@ -437,9 +437,9 @@ VALUES (SEQ_CLIENT_USER_ID.nextval, '1210801', '4a3ca91f11c4ade33cca71eabf4f179a
 INSERT INTO account
 VALUES (SEQ_ACCOUNT_ID.nextval, '1030432706/6100', 'CZ7661000000001030432706', 531.20, 1, 1, 4, 1, 1, 2);
 INSERT INTO account
-VALUES (SEQ_ACCOUNT_ID.nextval, '670100/2216739313/6210', 'CZ5262106701002216739313', 2999.00, 0, 5, 3, 2, 2, 2);
+VALUES (SEQ_ACCOUNT_ID.nextval, '670100/2216739313/6210', 'CZ5262106701002216739313', 2999.00, 0, 5, 3, 3, 2, 2);
 INSERT INTO account
-VALUES (SEQ_ACCOUNT_ID.nextval, '000000/5134779323/0900', 'SK4709000000005134779323', 150020.90, 0, 4, 4, 1, 1, 1);
+VALUES (SEQ_ACCOUNT_ID.nextval, '000000/5134779323/0900', 'SK4709000000005134779323', 150020.90, 0, 4, 4, 2, 1, 1);
 
 INSERT INTO payment_card
 VALUES (SEQ_PAYMENT_CARD_ID.nextval, '4801769871971639', '07/25', '656', 1, 10000.00, 10000.00, 10000.00, 40000.00, 3,

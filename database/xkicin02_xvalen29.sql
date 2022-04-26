@@ -668,7 +668,7 @@ VALUES (SEQ_RULES_ID.nextval, 1500, 3, 2);
 -- Card activity trigger presentation
 -- Updating expiration date to be overdue
 
--- Show all payment cards before activating the trigger
+-- Cards before activating the trigger
 SELECT CARD_NUMBER, EXPIRATION_DATE, IS_ACTIVE
 FROM PAYMENT_CARD;
 
@@ -676,14 +676,14 @@ UPDATE PAYMENT_CARD
 SET EXPIRATION_DATE = '03/22'
 WHERE PAYMENT_CARD_ID = 3;
 
--- Show all payment cards after activating the trigger
+-- Cards after activating the trigger
 SELECT CARD_NUMBER, EXPIRATION_DATE, IS_ACTIVE
 FROM PAYMENT_CARD;
 
 -- Transaction conversion trigger
 -- Creating new operation in CZK
 
--- Show all operation before activating the trigger
+-- Operations before activating the trigger
 SELECT operation_id, amount, currency_id
 FROM OPERATION;
 
@@ -691,7 +691,7 @@ INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0,
         'CZ5262106701002216739313', 3, 2, 4);
 
--- Show all operation after activating the trigger
+-- Operations after activating the trigger
 SELECT operation_id, amount, currency_id
 FROM OPERATION;
 
@@ -701,7 +701,7 @@ FROM OPERATION;
 --------------------------------
 
 -- Set limits to all card types own by VISA to 50 EUR
--- Show limits before procedure
+-- Limits before procedure
 SELECT DESCRIPTION, COMPANY, DEBIT_LIMIT
 FROM CARD_TYPE;
 
@@ -710,12 +710,12 @@ BEGIN
 END;
 /
 
--- Show limits after procedure
+-- Limits after procedure
 SELECT DESCRIPTION, COMPANY, DEBIT_LIMIT
 FROM CARD_TYPE;
 
 -- Increase salary to Directors by 50%
--- Show salaries before procedure
+-- Salaries before procedure
 SELECT WORK_POSITION, SALARY
 FROM EMPLOYEE;
 
@@ -724,7 +724,7 @@ BEGIN
 end;
 /
 
--- Show salaries after procedure
+-- Salaries after procedure
 SELECT WORK_POSITION, SALARY
 FROM EMPLOYEE;
 
@@ -732,22 +732,22 @@ FROM EMPLOYEE;
 --- SELECTS ---
 ---------------
 
--- ###### dva dotazy využívající spojení dvou tabulek ######
--- Zobrazenie základných informacií o účte
--- Číslo účtu, IBAN, zostatok, stav účtu (aktivný / neaktivný), typ účtu, poplatok za vedenie
+-- ###### Dva dotazy využívající spojení dvou tabulek ######
+-- Account number, IBAN, balance, activity, type, fee
+-- Basic information about accounts
 SELECT ACCOUNT_NUMBER, IBAN, BALANCE, IS_ACTIVE, TYPE_NAME, MANAGEMENT_FEE
 FROM account
          NATURAL JOIN account_type;
 
--- Zobrazenie podrobností o platobnej karte (karta/typ karty)
--- Číslo karty, datum expiracie, typ karty, spoločnosť
+-- Card number, expiration date, type, company
+-- Details about payment card
 SELECT CARD_NUMBER, EXPIRATION_DATE, CARD_TYPE.NAME as CARD_TYPE, COMPANY
 FROM payment_card
          NATURAL JOIN card_type;
 
--- ###### jeden využívající spojení tří tabulek ########
--- Zobrazenie informácii o človeku.
--- Meno, priezvisko, rodné číslo, pohlavie, dátum narodenia, telefonné číslo, email, adresa, mesto, krajina, psč
+-- ###### Jeden využívající spojení tří tabulek ########
+-- First name, last name, Identification number, gender, date of birth, phone number, email, address, city, country, postal code
+-- All info about person
 SELECT FIRST_NAME,
        LAST_NAME,
        PERSONAL_ID,
@@ -763,21 +763,21 @@ FROM person
          NATURAL JOIN place
          NATURAL JOIN contact_info;
 
--- ###### dva dotazy s klauzulí GROUP BY a agregační funkcí #######
--- Počet rôznych typov účtov
+-- ###### Dva dotazy s klauzulí GROUP BY a agregační funkcí #######
+-- Number of accounts by type
 SELECT TYPE_NAME, COUNT(*) as Accounts_count
 FROM ACCOUNT_TYPE
          NATURAL JOIN ACCOUNT
 GROUP BY TYPE_NAME;
 
--- Počet vydaných kariet jednotlivými spoločnosťami.
+-- Number of cards by company
 SELECT COMPANY, COUNT(*) as CARDS_COUNT
 FROM CARD_TYPE
 GROUP BY COMPANY;
 
--- ###### jeden dotaz obsahující predikát EXISTS ######
--- Zobrazenie služieb aktívnych účtov
--- Názov, popis, poplatok za službu
+-- ###### Jeden dotaz obsahující predikát EXISTS ######
+-- Name, description, fee
+-- Services of accounts that are active
 SELECT NAME, DESCRIPTION, FEE
 FROM SERVICE
 WHERE EXISTS(
@@ -787,9 +787,9 @@ WHERE EXISTS(
               WHERE SERVICE.SERVICE_ID = AccService.SERVICE_ID
                 AND IS_ACTIVE = 1);
 
--- ###### jeden dotaz s predikátem IN s vnořeným selectem (nikoliv IN s množinou konstantních dat) #######
--- Zobrazenie základných informácií o zamestnancoch banky, ktorá má vyššie kód banky ako 6000
--- Meno, priezvisko, rodné číslo, pozicia, plat
+-- ###### Jeden dotaz s predikátem IN s vnořeným selectem (nikoliv IN s množinou konstantních dat) #######
+-- First name, last name, personal ID, position, salary
+-- Employees in a bank with code > 6000
 SELECT FIRST_NAME, LAST_NAME, PERSONAL_ID, WORK_POSITION, SALARY
 FROM PERSON
          JOIN EMPLOYEE ON PERSON.PERSON_ID = EMPLOYEE.PERSON_ID

@@ -1,60 +1,3 @@
------------------------
---- CREATE TRIGGERS ---
------------------------
--- Card activity trigger
--- When changing or inserting new payment card - expiration date is checked
--- If it's overdue -> card_activity is set to 0, otherwise 1
-CREATE OR REPLACE TRIGGER CARD_ACTIVITY
-    BEFORE UPDATE OR INSERT
-    ON PAYMENT_CARD
-    FOR EACH ROW
-BEGIN
-    IF (((SUBSTR(:new.EXPIRATION_DATE, 4, 2) = SUBSTR(TO_CHAR(sysdate), 7, 2))
-        AND (SUBSTR(:new.EXPIRATION_DATE, 1, 2) < SUBSTR(TO_CHAR(sysdate), 4, 2)))
-        OR (SUBSTR(:new.EXPIRATION_DATE, 4, 2) < SUBSTR(TO_CHAR(sysdate), 7, 2)))
-    THEN
-        :new.IS_ACTIVE := 0;
-    ELSE
-        :new.IS_ACTIVE := 1;
-    END IF;
-end;
-/
-
--- Activity card
-UPDATE PAYMENT_CARD
-SET EXPIRATION_DATE = '03/22'
-WHERE PAYMENT_CARD_ID = 3;
-
-SELECT *
-FROM PAYMENT_CARD;
-
-
--- Transaction conversion trigger
--- When inserting new operation, if the currency is any other the EUR,
--- the amount of money is automatically converted to default currency using conversion rates in currency table
--- and currency is set to 1 (EUR)
-CREATE OR REPLACE TRIGGER TRANSACTION_CONVERSION
-    BEFORE INSERT
-    ON OPERATION
-    FOR EACH ROW
-DECLARE
-    ex_rate number;
-BEGIN
-    SELECT EXCHANGE_RATE INTO ex_rate FROM CURRENCY WHERE CURRENCY.CURRENCY_ID = :new.CURRENCY_ID;
-    IF (:new.CURRENCY_ID <> 1) THEN
-        :new.AMOUNT := :new.AMOUNT * ex_rate;
-        :new.CURRENCY_ID := 1;
-    END IF;
-END;
-/
-
-INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0,
-        'CZ5262106701002216739313', 2, 2);
-
-SELECT *
-FROM OPERATION;
-
 -- vytvoření alespoň dvou netriviálních uložených procedur vč. jejich předvedení,
 -- ve kterých se musí (dohromady) vyskytovat alespoň jednou kurzor,
 -- ošetření výjimek a použití proměnné s datovým typem odkazujícím se na řádek či
@@ -181,6 +124,21 @@ SELECT USER_ID, PERSON_ID, FIRST_NAME, LAST_NAME, ACCOUNT.ACCOUNT_NUMBER, ACCOUN
         NATURAL JOIN CLIENT
         NATURAL JOIN PERSON;
 
+CREATE MATERIALIZED VIEW show_disponents_accounts
+AS
+SELECT DISTINCT CLIENT_USER.USER_ID, PERSON_ID, FIRST_NAME,
+                LAST_NAME, ACCOUNT.ACCOUNT_NUMBER, ACCOUNT.BALANCE
+        FROM ACCOUNT
+        JOIN RULES ON ACCOUNT.ACCOUNT_ID = RULES.ACCOUNT_ID
+        JOIN CLIENT_USER ON RULES.USER_ID = CLIENT_USER.USER_ID
+        JOIN CLIENT ON CLIENT_USER.CLIENT_ID = CLIENT.CLIENT_ID
+        NATURAL JOIN PERSON;
+
+
 GRANT ALL ON show_owners_accounts TO XVALEN29;
 
+GRANT ALL ON show_disponents_accounts TO XVALEN29;
+
 SELECT * FROM show_owners_accounts;
+
+SELECT * FROM show_disponents_accounts;

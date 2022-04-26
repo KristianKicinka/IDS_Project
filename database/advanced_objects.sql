@@ -172,3 +172,15 @@ ORDER BY owner, table_name;
 -- vytvořen alespoň jeden materializovaný pohled patřící druhému členu týmu a používající tabulky definované prvním
 -- členem týmu (nutno mít již definována přístupová práva), vč. SQL příkazů/dotazů ukazujících, jak
 -- materializovaný pohled funguje,
+
+CREATE MATERIALIZED VIEW show_owners_accounts
+AS
+SELECT USER_ID, PERSON_ID, FIRST_NAME, LAST_NAME, ACCOUNT.ACCOUNT_NUMBER, ACCOUNT.BALANCE
+        FROM ACCOUNT
+        NATURAL JOIN CLIENT_USER
+        NATURAL JOIN CLIENT
+        NATURAL JOIN PERSON;
+
+GRANT ALL ON show_owners_accounts TO XVALEN29;
+
+SELECT * FROM show_owners_accounts;

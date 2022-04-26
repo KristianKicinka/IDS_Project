@@ -1,27 +1,40 @@
 -- DROP all custom tables that exists from declared array
+-- DROP all materialized views that exists from declared array
 -- DROP all sequences from user_sequences
 -- Create all custom sequences from the array
 BEGIN
     DECLARE
         type array_t is varray(40) of varchar2(100);
-        array array_t := array_t(
+        table_array array_t := array_t(
                 'person', 'client', 'employee', 'account', 'account_type', 'bank', 'branch', 'payment_card',
                 'client_user', 'card_type', 'operation', 'place', 'contact_info', 'service', 'currency',
                 'rules', 'account_service'
             );
+        view_array  array_t := array_t('show_disponents_account', 'show_owners_accounts');
     BEGIN
         FOR s IN (SELECT sequence_name FROM user_sequences)
             LOOP
                 EXECUTE IMMEDIATE ('DROP SEQUENCE ' || s.sequence_name);
             END LOOP;
-        FOR i IN 1..array.count
+        FOR i IN 1..table_array.count
             LOOP
-                EXECUTE IMMEDIATE ('CREATE SEQUENCE seq_' || array(i) || '_id');
+                EXECUTE IMMEDIATE ('CREATE SEQUENCE seq_' || table_array(i) || '_id');
                 BEGIN
-                    EXECUTE IMMEDIATE ('DROP TABLE ' || array(i) || ' CASCADE CONSTRAINTS');
+                    EXECUTE IMMEDIATE ('DROP TABLE ' || table_array(i) || ' CASCADE CONSTRAINTS');
                 EXCEPTION
                     WHEN OTHERS THEN
                         IF SQLCODE != -942 THEN
+                            RAISE;
+                        END IF;
+                END;
+            END LOOP;
+        FOR i IN 1..view_array.count
+            LOOP
+                BEGIN
+                    EXECUTE IMMEDIATE ('DROP MATERIALIZED VIEW ' || view_array(i));
+                EXCEPTION
+                    WHEN OTHERS THEN
+                        IF SQLCODE != -12003 THEN
                             RAISE;
                         END IF;
                 END;
@@ -559,7 +572,7 @@ FROM PAYMENT_CARD;
 -- Creating new operation in CZK
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0,
-        'CZ5262106701002216739313', 2, 2, 3);
+        'CZ5262106701002216739313', 3, 2, 4);
 -- Show all operation after activating the trigger
 SELECT *
 FROM OPERATION;

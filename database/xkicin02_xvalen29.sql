@@ -1,7 +1,6 @@
 -- DROP all custom tables that exists from declared array
 -- DROP all sequences from user_sequences
 -- Create all custom sequences from the array
-
 BEGIN
     DECLARE
         type array_t is varray(40) of varchar2(100);
@@ -145,7 +144,7 @@ CREATE TABLE payment_card
     global_payment_limit    decimal(10, 2),
     account_id              int, --FK
     card_type_id            int, --FK
-    user_id          int  --FK
+    user_id                 int  --FK
 );
 
 CREATE TABLE card_type
@@ -168,7 +167,8 @@ CREATE TABLE operation
     is_done        int CHECK (is_done IN (0, 1)),
     IBAN           varchar(30) CHECK (regexp_like(IBAN, '^(CZ|SK)[0-9]{22}$')),
     account_id     int, --FK
-    currency_id    int  --FK
+    currency_id    int, --FK
+    user_id        int  --FK
 );
 
 CREATE TABLE currency
@@ -254,7 +254,8 @@ ALTER TABLE payment_card
 ALTER TABLE operation
     ADD (
         CONSTRAINT fk_account_operation FOREIGN KEY (account_id) REFERENCES account (account_id) ON DELETE CASCADE,
-        CONSTRAINT fk_currency_operation FOREIGN KEY (currency_id) REFERENCES currency (currency_id) ON DELETE CASCADE
+        CONSTRAINT fk_currency_operation FOREIGN KEY (currency_id) REFERENCES currency (currency_id) ON DELETE CASCADE,
+        CONSTRAINT fk_user_operation FOREIGN KEY (user_id) REFERENCES client_user (user_id) ON DELETE CASCADE
         );
 
 -------------------------------
@@ -272,10 +273,10 @@ CREATE TABLE account_service
 
 CREATE TABLE rules
 (
-    id             int primary key,
-    daily_limit    int not null,
-    account_id     int,
-    user_id int,
+    id          int primary key,
+    daily_limit int not null,
+    account_id  int,
+    user_id     int,
     CONSTRAINT fk_account_rules FOREIGN KEY (account_id) REFERENCES account (account_id),
     CONSTRAINT fk_clientUser_rules FOREIGN KEY (user_id) REFERENCES client_user (user_id)
 );
@@ -499,20 +500,20 @@ INSERT INTO payment_card
 VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '04/22', '679', 1, 2000.00, 0.00, 0.00, 2000.00, 2, 1, 2);
 
 INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', '5.6.2021', '5.6.2021', 1, null, 3, 3);
+VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 100.00, '5.6.2021', '5.6.2021', '5.6.2021', 1, null, 3, 3, 1);
 INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', '6.8.2021', '6.8.2021', 1, null, 2, 4);
+VALUES (SEQ_OPERATION_ID.nextval, 'withdrawal', 20000.00, '6.8.2021', '6.8.2021', '6.8.2021', 1, null, 2, 4, 5);
 INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', '10.12.2021', '10.12.2021', 1, null, 1, 2);
+VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', '10.12.2021', '10.12.2021', 1, null, 1, 2, 1);
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 300.00, '10.1.2022', '10.1.2022', '11.1.2022', 1,
-        'SK4709000000005134779323', 1, 1);
+        'SK4709000000005134779323', 1, 1, 2);
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1350.00, '1.1.2022', '1.1.2022', '2.1.2022', 0, 'SK4709000000005134779323',
-        3, 1);
+        3, 1, 2);
 INSERT INTO operation
-VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0,
-        'CZ5262106701002216739313', 2, 2);
+VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1, '12.1.2022', '13.1.2022', '14.1.2022', 0,
+        'CZ5262106701002216739313', 2, 5, 3);
 
 INSERT INTO service
 VALUES (SEQ_SERVICE_ID.nextval, 'Loan', 'Standard loan', 10);
@@ -535,16 +536,36 @@ INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 3, '1.1.2020');
 
 INSERT INTO rules
-VALUES (SEQ_RULES_ID.nextval, 1000, 3, 1);
+VALUES (SEQ_RULES_ID.nextval, 100, 1, 1);
 INSERT INTO rules
-VALUES (SEQ_RULES_ID.nextval, 1000, 3, 2);
+VALUES (SEQ_RULES_ID.nextval, 200, 2, 5);
 INSERT INTO rules
-VALUES (SEQ_RULES_ID.nextval, 20, 3, 3);
+VALUES (SEQ_RULES_ID.nextval, 50000, 2, 3);
 INSERT INTO rules
-VALUES (SEQ_RULES_ID.nextval, 50, 1, 1);
+VALUES (SEQ_RULES_ID.nextval, 1500, 3, 1);
 INSERT INTO rules
-VALUES (SEQ_RULES_ID.nextval, 50, 2, 5);
+VALUES (SEQ_RULES_ID.nextval, 1500, 3, 2);
 
+-----------------------------
+--- TRIGGER PRESENTATIONS ---
+-----------------------------
+-- Card activity trigger presentation
+-- Updating expiration date to be overdue
+UPDATE PAYMENT_CARD
+SET EXPIRATION_DATE = '03/22'
+WHERE PAYMENT_CARD_ID = 3;
+-- Show all payment cards after activating the trigger
+SELECT *
+FROM PAYMENT_CARD;
+
+-- Transaction conversion trigger
+-- Creating new operation in CZK
+INSERT INTO operation
+VALUES (SEQ_OPERATION_ID.nextval, 'payment', 59.99, '12.1.2022', '13.1.2022', '14.1.2022', 0,
+        'CZ5262106701002216739313', 2, 2, 3);
+-- Show all operation after activating the trigger
+SELECT *
+FROM OPERATION;
 ---------------
 --- SELECTS ---
 ---------------

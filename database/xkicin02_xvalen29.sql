@@ -610,7 +610,7 @@ VALUES (SEQ_PAYMENT_CARD_ID.nextval, '4801769871971639', '07/25', '656', 1, 1000
 INSERT INTO payment_card
 VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5349804471300347', '04/28', '908', 1, 100.00, 0.00, 100.00, 200.00, 1, 1, 1);
 INSERT INTO payment_card
-VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '04/22', '679', 1, 2000.00, 0.00, 0.00, 2000.00, 2, 1, 2);
+VALUES (SEQ_PAYMENT_CARD_ID.nextval, '5495677450052911', '06/22', '679', 1, 2000.00, 0.00, 0.00, 2000.00, 2, 1, 2);
 
 INSERT INTO operation
 VALUES (SEQ_OPERATION_ID.nextval, 'deposit', 500.00, '10.12.2021', '10.12.2021', '10.12.2021', 1, null, 1, 2, 1);
@@ -627,12 +627,22 @@ VALUES (SEQ_OPERATION_ID.nextval, 'payment', 1, '12.1.2022', '13.1.2022', '14.1.
 INSERT INTO service
 VALUES (SEQ_SERVICE_ID.nextval, 'Loan', 'Standard loan', 10);
 INSERT INTO service
-VALUES (SEQ_SERVICE_ID.nextval, 'Monthly account statement', 'Basic account statement0', 5);
+VALUES (SEQ_SERVICE_ID.nextval, 'Monthly account statement', 'Basic account statement', 5);
 INSERT INTO service
 VALUES (SEQ_SERVICE_ID.nextval, 'Overdraft', 'Market account basic overdraft', 20);
 INSERT INTO service
 VALUES (SEQ_SERVICE_ID.nextval, 'Overdraft premium', 'Market account premium overdraft', 50);
+INSERT INTO service
+VALUES (SEQ_SERVICE_ID.nextval, 'Insurance', 'Basic account insurance', 20);
+INSERT INTO service
+VALUES (SEQ_SERVICE_ID.nextval, 'Insurance premium', 'Premium insurance', 40);
+INSERT INTO service
+VALUES (SEQ_SERVICE_ID.nextval, 'Premium consultancy', 'Premium account consultancy', 100);
 
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 5, '1.1.2022');
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 7, '30.3.2022');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 4, '1.1.2022');
 INSERT INTO account_service
@@ -643,6 +653,12 @@ INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 3, '1.1.2020');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 1, '28.12.2019');
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 7, '1.1.2022');
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 2, 5, '30.3.2022');
+INSERT INTO account_service
+VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 3, 5, '1.1.2022');
 INSERT INTO account_service
 VALUES (SEQ_ACCOUNT_SERVICE_ID.nextval, 1, 2, '28.10.2019');
 INSERT INTO account_service
@@ -834,6 +850,7 @@ FROM TABLE (DBMS_XPLAN.DISPLAY);
 --- CREATE MATERIALIZED VIEW ---
 --------------------------------
 
+-- Create materialized view showing people and the accounts they own
 CREATE MATERIALIZED VIEW show_owners_accounts
 AS
 SELECT USER_ID, PERSON_ID, FIRST_NAME, LAST_NAME, ACCOUNT.ACCOUNT_NUMBER, ACCOUNT.BALANCE
@@ -842,6 +859,7 @@ FROM ACCOUNT
          NATURAL JOIN CLIENT
          NATURAL JOIN PERSON;
 
+-- Create materialized view showing people and the accounts they have access to
 CREATE MATERIALIZED VIEW show_disponents_accounts
 AS
 SELECT DISTINCT CLIENT_USER.USER_ID,
@@ -856,6 +874,7 @@ FROM ACCOUNT
          JOIN CLIENT ON CLIENT_USER.CLIENT_ID = CLIENT.CLIENT_ID
          NATURAL JOIN PERSON;
 
+-- Grant privileges to xvalen29
 GRANT ALL ON show_owners_accounts TO XVALEN29;
 GRANT ALL ON show_disponents_accounts TO XVALEN29;
 
